@@ -1,0 +1,18 @@
+# python
+backend/.venv/
+__pycache__/
+*.py[cod]
+backend/.env
+backend/media/
+backend/staticfiles/
+
+# node
+frontend/node_modules/
+frontend/dist/
+
+# editors / os
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+*.tsbuildinfo

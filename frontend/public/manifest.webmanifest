@@ -1,0 +1,29 @@
+{
+  "name": "Firstlight — fresh milk from Suratgarh",
+  "short_name": "Firstlight",
+  "description": "Cow and buffalo milk delivered morning and evening, straight from the farm.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F5F2",
+  "theme_color": "#071310",
+  "categories": [
+    "food",
+    "shopping"
+  ],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

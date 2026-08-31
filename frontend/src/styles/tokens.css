@@ -1,0 +1,209 @@
+/* =====================================================================
+   Firstlight — design tokens
+   "Cold store": pine ink and cold white, with a lime signal on top.
+   Every colour a component reaches for is semantic; the raw ramps below
+   exist only to be assigned to one.
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ── Ramps ────────────────────────────────────────────────────────── */
+  --pine-950: #071310;
+  --pine-900: #0a1d17;
+  --pine-800: #103127;
+  --pine-700: #144534;
+  --pine-600: #0e6b4b;
+  --pine-500: #14855d;
+  --pine-300: #7ec4a8;
+  --pine-100: #d6eee3;
+
+  --cold-050: #ffffff;
+  --cold-100: #f7faf8;
+  --cold-200: #f1f5f2;
+  --cold-300: #e5ebe7;
+  --cold-400: #c9d5cf;
+  --cold-500: #93a8a0;
+  --cold-600: #638175;
+  --cold-700: #2c4a40;
+
+  --lime-500: #c6f24b;
+  --lime-700: #3c4f0c;
+  --lime-100: #eafbc0;
+
+  --sky-500: #2f6bf0;
+  --sky-100: #dde7ff;
+  --emerald-500: #0e9f6e;
+  --emerald-100: #d3f4e6;
+  --red-500: #d8412f;
+  --red-100: #fbe0dc;
+
+  /* ── Semantic ─────────────────────────────────────────────────────── */
+  --bg: var(--cold-200);
+  --bg-2: var(--cold-300);
+  --surface: var(--cold-050);
+  --surface-2: var(--cold-100);
+
+  --ink: var(--pine-950);
+  --ink-2: var(--cold-700);
+  --ink-3: var(--cold-600);
+
+  --line: rgba(7, 19, 16, 0.13);
+  --line-2: rgba(7, 19, 16, 0.06);
+
+  --brand: var(--pine-600);
+  --brand-deep: var(--pine-700);
+  --brand-soft: var(--pine-100);
+
+  --accent: var(--lime-500);
+  --accent-ink: var(--lime-700);
+  --accent-soft: var(--lime-100);
+
+  --info: var(--sky-500);
+  --info-soft: var(--sky-100);
+  --ok: var(--emerald-500);
+  --ok-soft: var(--emerald-100);
+  --bad: var(--red-500);
+  --bad-soft: var(--red-100);
+
+  /* Dark panels sitting inside a light page. */
+  --panel: var(--pine-950);
+  --panel-2: var(--pine-800);
+  --on-panel: #eaf3ee;
+  --on-panel-dim: #8fb3a6;
+  --on-panel-line: rgba(234, 243, 238, 0.14);
+  --on-panel-bad: #ff8a7a;
+
+  /* ── Type ─────────────────────────────────────────────────────────── */
+  --font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Mobile-first scale — these are the phone sizes. */
+  --t-xs: 0.72rem;
+  --t-sm: 0.82rem;
+  --t-base: 0.94rem;
+  --t-md: 1.05rem;
+  --t-lg: 1.28rem;
+  --t-xl: 1.7rem;
+  --t-2xl: 2.25rem;
+  --t-3xl: 2.9rem;
+
+  /* ── Space ────────────────────────────────────────────────────────── */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+
+  --pad: 1.15rem; /* the page gutter on a phone */
+  --shell: 1180px;
+
+  /* ── Shape ────────────────────────────────────────────────────────────
+     Squared off. Nothing here is a lozenge except a deliberate pill.     */
+  --r-xs: 4px;
+  --r-sm: 7px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --r-pill: 999px;
+
+  /* ── Depth ────────────────────────────────────────────────────────────
+     Hairlines do the structural work; shadow is reserved for things that
+     genuinely float.                                                     */
+  --ring: inset 0 0 0 1px var(--line);
+  --ring-2: inset 0 0 0 1px var(--line-2);
+  --sh-1: 0 1px 1px rgba(7, 19, 16, 0.04);
+  --sh-2: 0 2px 6px -2px rgba(7, 19, 16, 0.1);
+  --sh-3: 0 10px 28px -14px rgba(7, 19, 16, 0.3);
+  --sh-4: 0 30px 70px -30px rgba(7, 19, 16, 0.55);
+  --sh-up: 0 -10px 30px -22px rgba(7, 19, 16, 0.35);
+
+  /* ── Motion ───────────────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.46, 0.64, 1);
+
+  /* ── App chrome ───────────────────────────────────────────────────── */
+  --bar-h: 56px;
+  --tab-h: 62px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+
+  /* The page texture: a hairline field grid, not paper. */
+  --grid-size: 34px;
+  --grid-line: rgba(7, 19, 16, 0.045);
+}
+
+/* Larger phones and up */
+@media (min-width: 480px) {
+  :root {
+    --pad: 1.5rem;
+  }
+}
+
+/* Tablet and desktop: the type grows, the shell caps */
+@media (min-width: 900px) {
+  :root {
+    --t-base: 1rem;
+    --t-md: 1.15rem;
+    --t-lg: 1.5rem;
+    --t-xl: 2.1rem;
+    --t-2xl: 3.2rem;
+    --t-3xl: 4.6rem;
+    --pad: 2.5rem;
+    --bar-h: 72px;
+    --grid-size: 46px;
+  }
+}
+
+/* ── Dark ─────────────────────────────────────────────────────────────
+   Only the semantic layer flips. Lime stays lime in both.               */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #060f0c;
+    --bg-2: #0b1713;
+    --surface: #0e1b17;
+    --surface-2: #132420;
+
+    --ink: #e8f1ec;
+    --ink-2: #b3ccc2;
+    --ink-3: #7e9c91;
+
+    --line: rgba(232, 241, 236, 0.15);
+    --line-2: rgba(232, 241, 236, 0.07);
+
+    --brand: #35c48d;
+    --brand-deep: #5cdba9;
+    --brand-soft: rgba(53, 196, 141, 0.18);
+
+    --accent-ink: #d9f88a;
+    --accent-soft: rgba(198, 242, 75, 0.16);
+
+    --info: #7ea3ff;
+    --info-soft: rgba(126, 163, 255, 0.16);
+    --ok: #3dd598;
+    --ok-soft: rgba(61, 213, 152, 0.16);
+    --bad: #ff7565;
+    --bad-soft: rgba(255, 117, 101, 0.16);
+
+    /* In dark the slab has to sit above the page, not below it. */
+    --panel: #10261e;
+    --panel-2: #17362b;
+
+    --sh-1: 0 1px 1px rgba(0, 0, 0, 0.3);
+    --sh-2: 0 2px 6px -2px rgba(0, 0, 0, 0.5);
+    --sh-3: 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+    --sh-4: 0 30px 70px -30px rgba(0, 0, 0, 0.9);
+    --sh-up: 0 -10px 30px -22px rgba(0, 0, 0, 0.8);
+
+    --grid-line: rgba(232, 241, 236, 0.05);
+  }
+}
