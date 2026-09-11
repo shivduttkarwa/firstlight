@@ -7,7 +7,7 @@ from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
-from accounts.views import AddressViewSet, MeView, RequestOTPView, StaffLoginView, VerifyOTPView
+from accounts.views import AddressViewSet, LogoutView, MeView, RequestOTPView, StaffLoginView, VerifyOTPView
 from catalog.views import CategoryViewSet, ProductViewSet
 from orders.views import DeliveryViewSet, OrderViewSet, WalletView
 from subscriptions.views import PackageViewSet, SubscriptionLineViewSet, SubscriptionViewSet
@@ -30,6 +30,7 @@ api_patterns = [
     path("auth/otp/verify/", VerifyOTPView.as_view(), name="otp-verify"),
     path("auth/staff/login/", StaffLoginView.as_view(), name="staff-login"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("wallet/", WalletView.as_view(), name="wallet"),
     path("farm-info/", farm_info, name="farm-info"),

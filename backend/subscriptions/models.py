@@ -27,6 +27,15 @@ class Frequency(models.TextChoices):
     MONTHLY = "monthly", "Once a month"
 
 
+def line_total(unit_price, quantity, discount_percent):
+    """One line on one day, after the package discount. The roster charges this,
+    so every estimate adds up the same per-line figures."""
+    gross = unit_price * quantity
+    if discount_percent:
+        gross -= gross * discount_percent / Decimal("100")
+    return gross.quantize(Decimal("0.01"))
+
+
 def occurs_on(day, frequency, weekdays, anchor):
     """Does a rhythm land on this date, ignoring pauses and overrides?"""
     if frequency == Frequency.DAILY:
@@ -129,7 +138,7 @@ class Subscription(models.Model):
         CANCELLED = "cancelled", "Cancelled"
 
     user = models.ForeignKey("accounts.User", related_name="subscriptions", on_delete=models.CASCADE)
-    address = models.ForeignKey("accounts.Address", related_name="subscriptions", on_delete=models.PROTECT)
+    address = models.ForeignKey("accounts.Address", related_name="subscriptions", on_delete=models.RESTRICT)
     package = models.ForeignKey(
         Package, related_name="subscriptions", null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -164,25 +173,35 @@ class Subscription(models.Model):
 
     def per_day_total(self, day, overrides=None):
         """What this basket costs on one date, after the package discount."""
-        gross = Decimal("0")
+        total = Decimal("0")
         for line in self.active_lines:
             quantity = line.quantity_on(day, overrides)
             if quantity:
-                gross += line.unit_price * quantity
-        if self.discount_percent:
-            gross -= gross * self.discount_percent / Decimal("100")
-        return gross.quantize(Decimal("0.01"))
+                total += line_total(line.unit_price, quantity, self.discount_percent)
+        return total
 
-    def monthly_estimate(self, days=30):
+    def monthly_estimate(self, days=30, cached=False):
         today = timezone.localdate()
-        overrides = self.override_map()
+        overrides = self.override_map(cached)
         total = sum(
             (self.per_day_total(today + timedelta(days=i), overrides) for i in range(days)), Decimal("0")
         )
         return total.quantize(Decimal("0.01"))
 
-    def override_map(self):
-        """{line_id: {date: quantity}} read fresh — callers may have just written one."""
+    def override_map(self, cached=False):
+        """{line_id: {date: quantity}}, read fresh — callers may have just written one.
+
+        ``cached`` reuses ``lines__overrides`` when the queryset prefetched them,
+        which the read-only API views do; writers leave it off.
+        """
+        if cached:
+            lines = getattr(self, "_prefetched_objects_cache", {}).get("lines")
+            if lines is not None and all("overrides" in getattr(l, "_prefetched_objects_cache", {}) for l in lines):
+                return {
+                    line.id: {o.date: o.quantity for o in line.overrides.all()}
+                    for line in lines
+                    if line.overrides.all()
+                }
         table = {}
         for line_id, day, quantity in DayOverride.objects.filter(line__subscription=self).values_list(
             "line_id", "date", "quantity"
@@ -190,9 +209,9 @@ class Subscription(models.Model):
             table.setdefault(line_id, {})[day] = quantity
         return table
 
-    def upcoming_dates(self, count=5, from_date=None):
+    def upcoming_dates(self, count=5, from_date=None, cached=False):
         cursor = from_date or timezone.localdate()
-        overrides = self.override_map()
+        overrides = self.override_map(cached)
         found, guard = [], 0
         while len(found) < count and guard < 120:
             if self.is_running_on(cursor) and any(

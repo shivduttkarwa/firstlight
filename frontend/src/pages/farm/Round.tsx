@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppBar } from "../../components/Shell";
 import { Empty, Icon, Skeletons, Spinner } from "../../components/ui";
 import { ApiError, api, type Round, type RoundStop, type Slot } from "../../lib/api";
-import { addDays, money, relativeDay, toISO } from "../../lib/format";
+import { addDays, money, parseISO, relativeDay, toISO } from "../../lib/format";
 import { toast } from "../../store/useStore";
 
 export function FarmRound() {
@@ -30,8 +30,13 @@ export function FarmRound() {
   async function mark(stop: RoundStop, status: "delivered" | "failed") {
     setBusy(stop.address_id);
     try {
-      const ids = stop.items.filter((i) => i.status === "scheduled").map((i) => i.delivery_id);
-      await api.post("/farm/round/mark/", { delivery_ids: ids.length ? ids : stop.items.map((i) => i.delivery_id), status });
+      // Mark what is still open. Only when nothing is open is it a correction —
+      // then the items not already at this status change (the server refunds
+      // or charges once, never twice).
+      const open = stop.items.filter((i) => i.status === "scheduled" || i.status === "out_for_delivery");
+      const items = open.length ? open : stop.items.filter((i) => i.status !== status);
+      if (!items.length) return;
+      await api.post("/farm/round/mark/", { delivery_ids: items.map((i) => i.delivery_id), status });
       toast(status === "delivered" ? `${stop.customer} done.` : `Marked not delivered.`);
       await load();
     } catch (e) {
@@ -57,7 +62,7 @@ export function FarmRound() {
       <div className="shell">
         {/* Day picker */}
         <div className="inline" style={{ flexWrap: "nowrap", gap: "var(--sp-2)" }}>
-          <button className="iconbtn iconbtn--filled" onClick={() => setDate(toISO(addDays(new Date(date), -1)))} aria-label="Previous day">
+          <button className="iconbtn iconbtn--filled" onClick={() => setDate(toISO(addDays(parseISO(date), -1)))} aria-label="Previous day">
             <Icon.back />
           </button>
           <div style={{ flex: 1, textAlign: "center" }}>
@@ -72,7 +77,7 @@ export function FarmRound() {
           </div>
           <button
             className="iconbtn iconbtn--filled"
-            onClick={() => setDate(toISO(addDays(new Date(date), 1)))}
+            onClick={() => setDate(toISO(addDays(parseISO(date), 1)))}
             aria-label="Next day"
             style={{ transform: "rotate(180deg)" }}
           >

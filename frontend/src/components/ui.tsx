@@ -1,6 +1,8 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, type ReactNode } from "react";
+import { AnimatePresence, motion, useDragControls, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useToasts } from "../store/useStore";
+
+const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /* ── Icons ─────────────────────────────────────────────────────────── */
 
@@ -233,16 +235,42 @@ export function Sheet({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  const drag = useDragControls();
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const opener = document.activeElement as HTMLElement | null;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close.current();
+      if (e.key !== "Tab" || !panel.current) return;
+      // Keep Tab inside the dialog, as aria-modal promises.
+      const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute("disabled"));
+      if (!items.length) return;
+      const [first, last] = [items[0], items[items.length - 1]];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    // Focus the panel itself, not a field: a field would pop the phone keyboard.
+    const focusTimer = setTimeout(() => panel.current?.focus({ preventScroll: true }), 30);
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      opener?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  const startDrag = (e: React.PointerEvent) => drag.start(e);
 
   return (
     <AnimatePresence>
@@ -257,6 +285,8 @@ export function Sheet({
             onClick={onClose}
           />
           <motion.div
+            ref={panel}
+            tabIndex={-1}
             className="sheet"
             role="dialog"
             aria-modal="true"
@@ -266,15 +296,18 @@ export function Sheet({
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 34, stiffness: 340 }}
             drag="y"
+            // Only the grip and title bar drag: selecting text in a field must not close the sheet.
+            dragListener={false}
+            dragControls={drag}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={(_, info) => {
               if (info.offset.y > 110 || info.velocity.y > 700) onClose();
             }}
           >
-            <div className="sheet__grip" />
+            <div className="sheet__grip" onPointerDown={startDrag} />
             {title && (
-              <div className="sheet__head">
+              <div className="sheet__head" onPointerDown={startDrag}>
                 <h2 className="sheet__title">{title}</h2>
                 <button className="iconbtn" onClick={onClose} aria-label="Close">
                   <Icon.close />

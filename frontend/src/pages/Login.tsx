@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppBar, Logo } from "../components/Shell";
 import { Spinner } from "../components/ui";
 import { ApiError, api, type User } from "../lib/api";
+import { safeNext } from "../lib/nav";
 import { photo } from "../lib/photos";
 import { toast, useAuth } from "../store/useStore";
 
@@ -18,7 +19,7 @@ export function Login() {
   const navigate = useNavigate();
   const signIn = useAuth((s) => s.signIn);
   const user = useAuth((s) => s.user);
-  const next = params.get("next") ?? "/";
+  const next = safeNext(params.get("next"));
 
   const [stage, setStage] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
@@ -108,7 +109,7 @@ export function Login() {
       <AppBar back="/" />
       <div className="shell auth">
         <aside className="auth__panel">
-          <img {...photo("pour", 900, 1100)} />
+          <img {...photo("pour", 640, 780, "(min-width: 900px) 620px, 1px")} />
           <div className="auth__over">
             <span className="eyebrow">Firstlight</span>
             <h2 className="h2 mt-1">Milk at your gate before six.</h2>

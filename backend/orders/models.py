@@ -1,3 +1,4 @@
+import secrets
 from decimal import Decimal
 
 from django.db import models, transaction
@@ -16,14 +17,16 @@ class Delivery(models.Model):
         SKIPPED = "skipped", "Skipped"
         FAILED = "failed", "Not delivered"
 
+    # RESTRICT: a delivery is a ledger entry, so its basket, item and address
+    # cannot be deleted out from under it — only removed along with the customer.
     line = models.ForeignKey(
-        "subscriptions.SubscriptionLine", related_name="deliveries", on_delete=models.CASCADE
+        "subscriptions.SubscriptionLine", related_name="deliveries", on_delete=models.RESTRICT
     )
     subscription = models.ForeignKey(
-        "subscriptions.Subscription", related_name="deliveries", on_delete=models.CASCADE
+        "subscriptions.Subscription", related_name="deliveries", on_delete=models.RESTRICT
     )
     user = models.ForeignKey("accounts.User", related_name="deliveries", on_delete=models.CASCADE)
-    address = models.ForeignKey("accounts.Address", related_name="deliveries", on_delete=models.PROTECT)
+    address = models.ForeignKey("accounts.Address", related_name="deliveries", on_delete=models.RESTRICT)
     variant = models.ForeignKey("catalog.ProductVariant", related_name="deliveries", on_delete=models.PROTECT)
 
     date = models.DateField(db_index=True)
@@ -48,16 +51,44 @@ class Delivery(models.Model):
     def __str__(self):
         return f"{self.date} {self.get_slot_display()} — {self.variant}"
 
+    @property
+    def label(self):
+        return f"{self.variant.product.name} {self.variant.label} on {self.date}"
+
+    @transaction.atomic
     def mark_delivered(self):
-        """Idempotent on purpose: this debits a wallet, and riders double-tap."""
-        if self.status == self.Status.DELIVERED:
-            return None
-        self.status = self.Status.DELIVERED
-        self.delivered_at = timezone.now()
-        self.save(update_fields=["status", "delivered_at"])
-        return Wallet.for_user(self.user).debit(
-            self.total, f"{self.variant.product.name} {self.variant.label} on {self.date}", ref=str(self.pk)
+        """Idempotent on purpose: this debits a wallet, and riders double-tap.
+
+        The status flip is one conditional UPDATE, so of two simultaneous taps
+        exactly one sees a row change and only that one charges.
+        """
+        now = timezone.now()
+        claimed = (
+            Delivery.objects.filter(pk=self.pk)
+            .exclude(status=self.Status.DELIVERED)
+            .update(status=self.Status.DELIVERED, delivered_at=now)
         )
+        if not claimed:
+            self.refresh_from_db(fields=["status", "delivered_at"])
+            return None
+        self.status, self.delivered_at = self.Status.DELIVERED, now
+        return Wallet.for_user(self.user).debit(self.total, self.label, ref=str(self.pk))
+
+    @transaction.atomic
+    def set_status(self, new_status):
+        """Move to any status. Taking back a delivery that was marked delivered
+        refunds its charge, so a mis-tap can be undone without cost."""
+        if new_status == self.Status.DELIVERED:
+            return self.mark_delivered() is not None
+        current = Delivery.objects.select_for_update().get(pk=self.pk)
+        if current.status == new_status:
+            self.status = new_status
+            return False
+        Delivery.objects.filter(pk=self.pk).update(status=new_status, delivered_at=None)
+        if current.status == self.Status.DELIVERED:
+            Wallet.for_user(self.user).credit(self.total, f"Refund: {self.label}", ref=str(self.pk))
+        self.status, self.delivered_at = new_status, None
+        return True
 
 
 class Order(models.Model):
@@ -71,7 +102,7 @@ class Order(models.Model):
 
     reference = models.CharField(max_length=14, unique=True, blank=True)
     user = models.ForeignKey("accounts.User", related_name="orders", on_delete=models.CASCADE)
-    address = models.ForeignKey("accounts.Address", related_name="orders", on_delete=models.PROTECT)
+    address = models.ForeignKey("accounts.Address", related_name="orders", on_delete=models.RESTRICT)
     delivery_date = models.DateField()
     slot = models.CharField(max_length=10, choices=Slot.choices, default=Slot.MORNING)
 
@@ -91,8 +122,12 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.reference:
-            stamp = timezone.now().strftime("%y%m%d")
-            self.reference = f"FL{stamp}{timezone.now().microsecond % 10000:04d}"
+            stamp = timezone.localdate().strftime("%y%m%d")
+            while True:
+                reference = f"FL{stamp}{secrets.randbelow(10**6):06d}"
+                if not Order.objects.filter(reference=reference).exists():
+                    break
+            self.reference = reference
         super().save(*args, **kwargs)
 
     def recalculate(self):

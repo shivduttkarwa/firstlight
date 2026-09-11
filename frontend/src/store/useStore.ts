@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiError, api, tokens, type Address, type Basket, type StaffUser, type User } from "../lib/api";
+import { ApiError, api, session, tokens, type Address, type Basket, type StaffUser, type User } from "../lib/api";
 
 interface AuthState {
   user: User | null;
@@ -43,12 +43,19 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   signOut: () => {
+    const refresh = tokens.refresh;
+    // Retire the refresh token on the server too; fire and forget.
+    if (refresh) void api.post("/auth/logout/", { refresh }).catch(() => undefined);
     tokens.clear();
     localStorage.removeItem(STAFF_KEY);
     set({ user: null, staff: null, addresses: [], baskets: [] });
   },
 
   bootstrap: async () => {
+    session.expired = () => {
+      localStorage.removeItem(STAFF_KEY);
+      set({ user: null, staff: null, addresses: [], baskets: [] });
+    };
     if (!tokens.access) {
       set({ ready: true });
       return;
@@ -57,7 +64,8 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (stored) {
       // Staff session: prove the token is still good before trusting the cache.
       try {
-        await api.get("/farm/overview/");
+        const me = await api.get<User>("/auth/me/");
+        if (!me.is_staff) throw new ApiError(403, {});
         set({ staff: JSON.parse(stored) as StaffUser, ready: true });
       } catch (e) {
         if (isSignedOut(e)) {

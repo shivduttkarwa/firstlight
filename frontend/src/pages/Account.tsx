@@ -15,7 +15,8 @@ import {
   type Summary,
   type Wallet,
 } from "../lib/api";
-import { longDate, money, relativeDay, slotLabel } from "../lib/format";
+import { longDate, money, relativeDay, slotLabel, toISO } from "../lib/format";
+import { safeNext } from "../lib/nav";
 import { toast, useAuth } from "../store/useStore";
 
 function RequireUser({ children }: { children: React.ReactNode }) {
@@ -233,14 +234,18 @@ const PRESETS = [500, 1000, 2000, 5000];
 
 export function WalletPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [failed, setFailed] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const refreshUser = useAuth((s) => s.refreshUser);
 
   useEffect(() => {
-    void api.get<Wallet>("/wallet/").then(setWallet).catch(() => undefined);
+    void api.get<Wallet>("/wallet/").then(setWallet).catch(() => setFailed(true));
   }, []);
+
+  // Rupees with at most two decimals, between 1 and 50,000.
+  const validAmount = /^\d+(\.\d{1,2})?$/.test(amount) && Number(amount) >= 1 && Number(amount) <= 50000;
 
   async function topUp() {
     setBusy(true);
@@ -270,14 +275,22 @@ export function WalletPage() {
           <p className="sm" style={{ color: "var(--on-panel-dim)", marginTop: 6 }}>
             Every delivery is drawn from here on the day it goes out.
           </p>
-          <button className="btn btn--primary btn--block mt-3" onClick={() => setOpen(true)}>
-            Add money
-          </button>
+          {wallet?.can_top_up === false ? (
+            <p className="sm mt-3" style={{ color: "var(--on-panel)" }}>
+              To add money, pay the rider or the farm by cash or UPI. It shows up here the same day.
+            </p>
+          ) : (
+            <button className="btn btn--primary btn--block mt-3" onClick={() => setOpen(true)} disabled={!wallet}>
+              Add money
+            </button>
+          )}
         </div>
 
         <div>
           <h2 className="h3 mb-2">Recent activity</h2>
-          {wallet === null ? (
+          {failed ? (
+            <Empty title="Could not load your wallet" body="Check your connection and open this page again." />
+          ) : wallet === null ? (
             <Skeletons count={4} height={62} />
           ) : wallet.transactions.length === 0 ? (
             <Empty title="Nothing yet" body="Top-ups and delivery charges will show up here." />
@@ -326,7 +339,7 @@ export function WalletPage() {
         onClose={() => setOpen(false)}
         title="Add money"
         footer={
-          <button className="btn btn--primary btn--lg btn--block" onClick={topUp} disabled={busy || !Number(amount)}>
+          <button className="btn btn--primary btn--lg btn--block" onClick={topUp} disabled={busy || !validAmount}>
             {busy ? <Spinner /> : null} Add {money(amount || 0)}
           </button>
         }
@@ -367,7 +380,10 @@ export function Deliveries() {
   const [days, setDays] = useState<CalendarDay[]>([]);
 
   useEffect(() => {
-    void api.get<Delivery[]>("/deliveries/").then(setRows).catch(() => setRows([]));
+    // The last fortnight and what is coming — not every delivery since the start.
+    const since = new Date();
+    since.setDate(since.getDate() - 14);
+    void api.get<Delivery[]>(`/deliveries/?from=${toISO(since)}`).then(setRows).catch(() => setRows([]));
   }, []);
 
   const basketIds = baskets
@@ -494,7 +510,7 @@ export function Addresses() {
   const [adding, setAdding] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const next = params.get("next");
+  const next = params.get("next") ? safeNext(params.get("next")) : null;
 
   async function makeDefault(a: Address) {
     try {

@@ -1,8 +1,10 @@
 """Populate a fresh database with the farm's real catalogue and storefront copy."""
 
+import os
 from decimal import Decimal
 
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from wagtail.models import Page, Site
 
@@ -188,10 +190,24 @@ FAQS = [
 
 
 class Command(BaseCommand):
-    help = "Seed the catalogue, plans and storefront page. Safe to run more than once."
+    help = (
+        "Seed the catalogue, plans and storefront page. Safe to run more than once: "
+        "anything that already exists is left as the farm has it."
+    )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--admin-password",
+            help="Password for the 'admin' staff login. Required outside DEBUG (or set SEED_ADMIN_PASSWORD).",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
+        self.admin_password = (
+            options.get("admin_password")
+            or os.getenv("SEED_ADMIN_PASSWORD")
+            or ("firstlight" if settings.DEBUG else None)
+        )
         self.seed_categories()
         self.seed_products()
         self.seed_packages()
@@ -201,7 +217,7 @@ class Command(BaseCommand):
 
     def seed_categories(self):
         for name, slug, tagline, order in CATEGORIES:
-            Category.objects.update_or_create(
+            Category.objects.get_or_create(
                 slug=slug, defaults={"name": name, "tagline": tagline, "sort_order": order}
             )
         self.stdout.write(f"  categories: {Category.objects.count()}")
@@ -209,7 +225,7 @@ class Command(BaseCommand):
     def seed_products(self):
         for spec in PRODUCTS:
             category = Category.objects.get(slug=spec["category"])
-            product, _ = Product.objects.update_or_create(
+            product, _ = Product.objects.get_or_create(
                 slug=spec["slug"],
                 defaults={
                     "name": spec["name"],
@@ -231,7 +247,7 @@ class Command(BaseCommand):
                 },
             )
             for index, (label, qty, unit, price, compare) in enumerate(spec["variants"]):
-                ProductVariant.objects.update_or_create(
+                ProductVariant.objects.get_or_create(
                     product=product,
                     label=label,
                     defaults={
@@ -248,7 +264,7 @@ class Command(BaseCommand):
 
     def seed_packages(self):
         for spec in PACKAGES:
-            package, _ = Package.objects.update_or_create(
+            package, made = Package.objects.get_or_create(
                 slug=spec["slug"],
                 defaults={
                     "name": spec["name"],
@@ -261,7 +277,8 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
-            package.items.all().delete()
+            if not made:
+                continue
             for order, (slug, label, qty, slot, frequency, weekdays) in enumerate(spec["items"]):
                 variant = ProductVariant.objects.get(product__slug=slug, label=label)
                 PackageItem.objects.create(
@@ -280,8 +297,11 @@ class Command(BaseCommand):
 
         admin = User.objects.filter(username="admin").first()
         if admin is None:
-            admin = User.objects.create_superuser("admin", password="firstlight", full_name="Farm Admin")
-            self.stdout.write("  staff: created 'admin' (password: firstlight)")
+            if not self.admin_password:
+                raise CommandError("Pass --admin-password (or set SEED_ADMIN_PASSWORD) for the 'admin' login.")
+            User.objects.create_superuser("admin", password=self.admin_password, full_name="Farm Admin")
+            shown = self.admin_password if settings.DEBUG else "the one you gave"
+            self.stdout.write(f"  staff: created 'admin' (password: {shown})")
         else:
             self.stdout.write("  staff: 'admin' already there")
 
@@ -294,6 +314,10 @@ class Command(BaseCommand):
         ]
 
         home = HomePage.objects.first()
+        if home is not None:
+            # The farm edits this text from the farm desk; never write over it.
+            self.stdout.write("  storefront page already there")
+            return
         if home is None:
             root = Page.objects.get(depth=1)
             # Wagtail installs a placeholder "Welcome" page; retire it.

@@ -5,6 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -17,8 +18,16 @@ def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key")
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    return default if value is None else value.strip().lower() in ("1", "true", "yes", "on")
+
+
+# Safe by default: a server that forgets its .env runs locked down, not wide open.
+DEBUG = env_bool("DJANGO_DEBUG", False)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or ("insecure-dev-key" if DEBUG else "")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY: it signs every login token.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
@@ -46,6 +55,7 @@ INSTALLED_APPS = [
     "django_filters",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -152,16 +162,23 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
     "DEFAULT_RENDERER_CLASSES": (
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
+        ("rest_framework.renderers.JSONRenderer", "rest_framework.renderers.BrowsableAPIRenderer")
+        if DEBUG
+        else ("rest_framework.renderers.JSONRenderer",)
     ),
+    # Per client IP, on the endpoints that can be hammered without an account.
+    "DEFAULT_THROTTLE_RATES": {
+        "otp_request": os.getenv("THROTTLE_OTP_REQUEST", "20/hour"),
+        "otp_verify": os.getenv("THROTTLE_OTP_VERIFY", "40/hour"),
+        "staff_login": os.getenv("THROTTLE_STAFF_LOGIN", "10/hour"),
+    },
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=60),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": True,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
@@ -185,13 +202,25 @@ FARM = {
 
 # How many days ahead the delivery roster is generated.
 DELIVERY_ROSTER_DAYS = 14
-# Cut-off times after which a customer can no longer change tomorrow's order.
+# When a round is packed and stops taking changes: the morning round at this
+# time the evening before, the evening round at this time the same day.
 SLOT_CUTOFFS = {"morning": "21:00", "evening": "13:00"}
+
+# No SMS gateway yet. These echo the sign-in code on screen, and let customers
+# add wallet money themselves — both fine for a demo, never for real money.
+OTP_SHOW_CODE = env_bool("OTP_SHOW_CODE", DEBUG)
+WALLET_SELF_TOPUP = env_bool("WALLET_SELF_TOPUP", DEBUG)
+# Per phone number, on top of the per-IP throttles above.
+OTP_CODES_PER_HOUR = int(os.getenv("OTP_CODES_PER_HOUR", "50" if DEBUG else "5"))
+OTP_FAILURES_PER_DAY = int(os.getenv("OTP_FAILURES_PER_DAY", "100" if DEBUG else "15"))
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 if not DEBUG:
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_SSL_REDIRECT = True
+    # TLS ends at the proxy (nginx); trust its header so redirects and cookies know.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SSL_REDIRECT", True)
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "31536000"))
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_REFERRER_POLICY = "same-origin"

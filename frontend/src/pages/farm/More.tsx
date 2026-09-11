@@ -154,13 +154,13 @@ export function FarmMore() {
 
 /* ── Website text ──────────────────────────────────────────────────── */
 
-const FIELDS: { key: keyof SiteContent; label: string; hint: string; long?: boolean }[] = [
-  { key: "hero_eyebrow", label: "Small line above the headline", hint: "e.g. Village 11 SHPD, Suratgarh" },
-  { key: "hero_heading", label: "Big headline", hint: "The first thing anyone reads" },
+const FIELDS: { key: keyof SiteContent; label: string; hint: string; long?: boolean; max?: number; required?: boolean }[] = [
+  { key: "hero_eyebrow", label: "Small line above the headline", hint: "e.g. Village 11 SHPD, Suratgarh", max: 80 },
+  { key: "hero_heading", label: "Big headline", hint: "The first thing anyone reads", max: 140, required: true },
   { key: "hero_subheading", label: "Under the headline", hint: "One or two sentences", long: true },
-  { key: "hero_cta_label", label: "Button text", hint: "e.g. Start a subscription" },
-  { key: "story_heading", label: "Story heading", hint: "Further down the page" },
-  { key: "story_body", label: "Story text", hint: "A short paragraph about the farm", long: true },
+  { key: "hero_cta_label", label: "Button text", hint: "e.g. Start a subscription", max: 40 },
+  { key: "story_heading", label: "Story heading", hint: "Further down the page", max: 140 },
+  { key: "story_body", label: "Story text", hint: "Leave a blank line between paragraphs", long: true },
 ];
 
 export function FarmWebsite() {
@@ -169,13 +169,28 @@ export function FarmWebsite() {
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    void api.get<SiteContent>("/farm/content/").then(setContent).catch(() => toast("Could not load the text.", "error"));
+    void api
+      .get<SiteContent>("/farm/content/")
+      // Clean the stored text once, on the way in. Doing it on every render
+      // ate each space and line break as it was typed.
+      .then((c) =>
+        setContent({
+          ...c,
+          ...Object.fromEntries(FIELDS.filter((f) => f.key !== "story_body").map((f) => [f.key, stripTags(c[f.key])])),
+          story_body: htmlToParagraphs(c.story_body),
+        }),
+      )
+      .catch(() => toast("Could not load the text.", "error"));
   }, []);
 
+  const missing = FIELDS.find((f) => f.required && !content?.[f.key]?.trim());
+
   async function save() {
+    if (!content) return;
     setBusy(true);
     try {
-      await api.patch("/farm/content/", content);
+
+      await api.patch("/farm/content/", { ...content, story_body: paragraphsToHtml(content.story_body) });
       toast("Website updated. Customers see it straight away.");
       setDirty(false);
     } catch (e) {
@@ -211,7 +226,8 @@ export function FarmWebsite() {
               {f.long ? (
                 <textarea
                   className="textarea"
-                  value={stripTags(content[f.key])}
+                  rows={f.key === "story_body" ? 7 : 3}
+                  value={content[f.key]}
                   onChange={(e) => {
                     setContent({ ...content, [f.key]: e.target.value });
                     setDirty(true);
@@ -220,7 +236,9 @@ export function FarmWebsite() {
               ) : (
                 <input
                   className="input"
-                  value={stripTags(content[f.key])}
+                  maxLength={f.max}
+                  required={f.required}
+                  value={content[f.key]}
                   onChange={(e) => {
                     setContent({ ...content, [f.key]: e.target.value });
                     setDirty(true);
@@ -233,16 +251,41 @@ export function FarmWebsite() {
         </div>
 
         <div className="mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
-          <button className="btn btn--primary btn--lg btn--block btn--desk-auto" onClick={save} disabled={busy || !dirty}>
+          <button
+            className="btn btn--primary btn--lg btn--block btn--desk-auto"
+            onClick={save}
+            disabled={busy || !dirty || !!missing}
+          >
             {busy ? <Spinner /> : null} {dirty ? "Save and publish" : "Nothing to save"}
           </button>
+          {missing && <p className="hint mt-1">{missing.label} cannot be empty.</p>}
         </div>
       </div>
     </>
   );
 }
 
-/** The story field is rich text in the CMS; staff should just see sentences. */
+/** Plain sentences out of stored text that may carry a little HTML. */
 function stripTags(value: string) {
-  return (value ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const box = document.createElement("div");
+  box.innerHTML = value ?? "";
+  return (box.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+/** The story is rich text in the CMS; staff edit it as paragraphs split by a blank line. */
+function htmlToParagraphs(html: string) {
+  const box = document.createElement("div");
+  box.innerHTML = html ?? "";
+  const blocks = [...box.querySelectorAll("p")].map((p) => (p.textContent ?? "").trim()).filter(Boolean);
+  return blocks.length ? blocks.join("\n\n") : stripTags(html);
+}
+
+function paragraphsToHtml(text: string) {
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim().replace(/\s*\n\s*/g, " "))
+    .filter(Boolean)
+    .map((p) => `<p>${escape(p)}</p>`)
+    .join("");
 }

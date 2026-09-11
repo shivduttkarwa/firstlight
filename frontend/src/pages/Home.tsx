@@ -184,7 +184,7 @@ export function Home() {
         <div className="shell">
           <Reveal className="story">
             <div className="figure story__fig">
-              <img {...photo("field", 1100, 820)} />
+              <img {...photo("field", 960, 720, "(min-width: 900px) 680px, 92vw")} />
               <div className="figure__over">
                 <span className="eyebrow">Sriganganagar, 5.10 am</span>
               </div>
@@ -360,7 +360,7 @@ function Morning({ steps }: { steps: { time: string; title: string; body: string
                   viewport={{ once: true, margin: "-15% 0px" }}
                   transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
                 >
-                  <img {...photo(STEP_PHOTOS[i % STEP_PHOTOS.length], 720, 540)} />
+                  <img {...photo(STEP_PHOTOS[i % STEP_PHOTOS.length], 720, 540, "(min-width: 900px) 540px, 80vw")} />
                   <span className="step__n num">{String(i + 1).padStart(2, "0")}</span>
                 </motion.figure>
 
@@ -389,6 +389,10 @@ function Hero({ content }: { content: HomeContent | null }) {
   const still = useReducedMotion();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Frames load as the show reaches them (plus the next, so its fade is ready):
+  // stacked on screen, "lazy" alone would fetch all three at once.
+  const [reached, setReached] = useState(0);
+  useEffect(() => setReached((r) => Math.max(r, i)), [i]);
 
   useEffect(() => {
     if (still || paused) return;
@@ -405,15 +409,17 @@ function Hero({ content }: { content: HomeContent | null }) {
       >
         {/* Opacity only. The slow drift is a CSS animation that never restarts,
             so nothing snaps back while a frame is still fading out. */}
-        {HERO_SLIDES.map((slide, n) => (
-          <img
-            key={slide.key}
-            {...fullBleed(slide.key)}
-            alt=""
-            className={`hero__frame${n === i ? " hero__frame--on" : ""}`}
-            loading={n === 0 ? "eager" : "lazy"}
-          />
-        ))}
+        {HERO_SLIDES.map((slide, n) =>
+          n <= reached + 1 ? (
+            <img
+              key={slide.key}
+              {...fullBleed(slide.key)}
+              alt=""
+              className={`hero__frame${n === i ? " hero__frame--on" : ""}`}
+              loading={n === 0 ? "eager" : "lazy"}
+            />
+          ) : null,
+        )}
 
         <div className="hero__body">
           <motion.div

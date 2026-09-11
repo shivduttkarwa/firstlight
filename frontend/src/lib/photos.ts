@@ -72,12 +72,20 @@ export const PHOTOS = {
 
 export type PhotoKey = keyof typeof PHOTOS;
 
-/** A photo sized for a given layout width, with a 2x source set. */
-export function photo(key: PhotoKey, w: number, h?: number) {
+const WIDTHS = [360, 540, 720, 960, 1280, 1600, 2000];
+
+/** A photo cropped to w×h, offered at several widths. `sizes` says how wide it
+    actually shows, so a phone takes the small file instead of the desktop one. */
+export function photo(key: PhotoKey, w: number, h?: number, sizes = `(min-width: 900px) ${w}px, 92vw`) {
   const p = PHOTOS[key];
+  const ratio = h ? h / w : undefined;
+  const at = (width: number) => src(p.id, width, ratio && Math.round(width * ratio));
   return {
-    src: src(p.id, w, h),
-    srcSet: `${src(p.id, w, h)} 1x, ${src(p.id, w * 2, h && h * 2)} 2x`,
+    src: at(w),
+    srcSet: WIDTHS.filter((width) => width <= w * 2)
+      .map((width) => `${at(width)} ${width}w`)
+      .join(", "),
+    sizes,
     alt: p.alt,
     loading: "lazy" as const,
     decoding: "async" as const,

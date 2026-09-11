@@ -48,8 +48,10 @@ to Django directly. Note it will not install to the home screen over plain http;
 
 **Customers — phone number and a one-time code.** Nobody buying milk wants to invent
 a password, and the farm needs the phone number anyway to deliver. No SMS gateway is
-wired up yet, so while `DEBUG=True` the code comes back in the response and the
-sign-in screen prints it on the card. Any 10-digit number works.
+wired up yet, so while `OTP_SHOW_CODE` is on (it follows `DEBUG` unless set) the code
+comes back in the response and the sign-in screen prints it on the card. Any Indian
+mobile number works. Codes are capped per number and per IP, and a number with too
+many wrong guesses is locked for a day.
 
 **Staff — username and password**, at `/farm/login`. Staff accounts have no phone
 number, so nobody can reach them through the customer code flow.
@@ -71,9 +73,23 @@ cd ../frontend
 npm install
 ```
 
-`seed` is safe to re-run and creates the `admin` / `firstlight` staff account.
-Settings come from `backend/.env` (see `.env.example`). The database is on
-**PostgreSQL 18, port 5432** — note this machine also runs PG 13 on 5433.
+`seed` is safe to re-run: anything that already exists — prices, hidden products,
+website text the farm has edited — is left alone. Under `DEBUG` it creates the
+`admin` / `firstlight` staff account; anywhere else pass `--admin-password` (or set
+`SEED_ADMIN_PASSWORD`). Settings come from `backend/.env` (see `.env.example`). The
+database is on **PostgreSQL 18, port 5432** — note this machine also runs PG 13 on 5433.
+
+**Tests.** `.venv/Scripts/python.exe manage.py test` runs the backend suite; GitHub
+Actions runs it on every push, with `DEBUG` off, alongside the frontend build.
+
+**Settings that matter on a server** (all in `.env`):
+
+| | |
+|---|---|
+| `DJANGO_DEBUG` | Off unless set. Must be off anywhere public. |
+| `DJANGO_SECRET_KEY` | Required when `DEBUG` is off; it signs every login token. |
+| `OTP_SHOW_CODE` | Show the sign-in code on screen. Needed until SMS exists — a demo only. |
+| `WALLET_SELF_TOPUP` | Let customers add wallet money themselves. A demo only — it is free money. |
 
 ---
 
@@ -111,8 +127,9 @@ go through it.
 ## The delivery roster
 
 Deliveries are not computed on the fly; they are **cut into a roster** the farm works
-from. Editing a basket re-cuts its own rows immediately. Run this nightly to extend
-the window:
+from. Editing a basket re-cuts its own rows immediately. Run this nightly (cron) to
+extend the window — and as a safety net the API tops it up once a day by itself the
+first time the farm desk or a customer's deliveries are opened:
 
 ```bash
 .venv/Scripts/python.exe manage.py build_roster --days 14
@@ -120,10 +137,19 @@ the window:
 
 Safe to run repeatedly. Days the customer skipped or paused are withdrawn while still
 `scheduled`; rows already delivered are never touched. Staff can also trigger it from
-**Farm desk → More → Rebuild the roster**.
+**Farm desk → More → Rebuild the roster**. A basket paused until a date becomes active
+again when that date arrives.
+
+**Cut-offs.** A round is *packed* at `SLOT_CUTOFFS`: 9 pm the night before for the
+morning round, 1 pm the same day for the evening. After that its rows are frozen —
+day changes are refused, and a pause, cancel or basket edit only takes effect from the
+next open round. The app greys packed days out.
 
 **Money never moves at the gate.** Customers top up a wallet; marking a delivery done
-debits it. That call is idempotent, because riders double-tap.
+debits it. That is one conditional update, so a double tap charges once; taking a
+delivered item back to missed refunds it. Deliveries are read-only in the Wagtail
+admin, because a status edited there would skip the wallet. Removing a basket item
+retires it rather than deleting it, so its history and charges stay.
 
 ---
 
@@ -223,9 +249,13 @@ tabs become a top nav and the shell caps at 1180px.
 
 ## Things left deliberately open
 
-- **No payment gateway.** `POST /api/wallet/` credits directly; the staff top-up
-  records cash. Replace the body of `WalletView.post` with a gateway callback.
-- **No SMS.** `OneTimeCode` is issued and returned in the response under `DEBUG`.
+- **No payment gateway.** `POST /api/wallet/` credits directly, and only while
+  `WALLET_SELF_TOPUP` is on; the staff top-up records cash. Replace the body of
+  `WalletView.post` with a gateway callback.
+- **No SMS.** `OneTimeCode` is issued and returned in the response while `OTP_SHOW_CODE` is on.
+- **One-off orders are read-only.** Nothing puts them on the round or charges for them
+  yet, so placing one is switched off until that exists.
+- **Offer codes are display only.** Nothing redeems `FIRSTLIGHT20` and friends yet.
 - **No delivery-area check.** Any PIN code is accepted.
 - **No service worker.** The manifest makes it installable, but it does not work
   offline yet — worth adding for riders in patchy signal.

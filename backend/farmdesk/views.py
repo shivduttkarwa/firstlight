@@ -6,13 +6,14 @@ vocabulary leaks through here.
 """
 
 from datetime import datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -22,10 +23,29 @@ from accounts.models import User
 from catalog.models import Category, Product, ProductVariant
 from catalog.serializers import ProductSerializer
 from orders.models import Delivery, Wallet
-from subscriptions.models import Package, Subscription
+from orders.money import parse_amount
+from subscriptions.models import Package, Subscription, SubscriptionLine
 from subscriptions.serializers import PackageSerializer, SubscriptionSerializer
-from subscriptions.services import build_roster
+from subscriptions.services import build_roster, ensure_roster
 from website.models import HomePage
+
+# Still to be handed over: what a rider can deliver, or miss.
+OPEN = (Delivery.Status.SCHEDULED, Delivery.Status.OUT)
+
+
+def product_in_baskets(product):
+    return SubscriptionLine.objects.filter(
+        variant__product=product, is_active=True, subscription__status__in=["active", "paused"]
+    ).count()
+
+
+class StaffProductSerializer(ProductSerializer):
+    """The shop's product, plus what only the farm needs to see."""
+
+    is_active = serializers.BooleanField(read_only=True)
+
+    class Meta(ProductSerializer.Meta):
+        fields = [*ProductSerializer.Meta.fields, "is_active"]
 
 
 class IsFarmStaff(BasePermission):
@@ -55,6 +75,7 @@ class RoundView(APIView):
     permission_classes = [IsFarmStaff]
 
     def get(self, request):
+        ensure_roster()
         day = parse_date(request.query_params.get("date"), timezone.localdate())
         slot = request.query_params.get("slot", "morning")
 
@@ -80,6 +101,7 @@ class RoundView(APIView):
                     "note": row.address.delivery_note,
                     "items": [],
                     "value": Decimal("0"),
+                    "to_charge": Decimal("0"),
                 },
             )
             stop["items"].append(
@@ -95,6 +117,8 @@ class RoundView(APIView):
                 }
             )
             stop["value"] += row.total
+            if row.status in OPEN:
+                stop["to_charge"] += row.total
 
         balances = dict(
             Wallet.objects.filter(user_id__in={s["customer_id"] for s in stops.values()}).values_list(
@@ -107,18 +131,21 @@ class RoundView(APIView):
             states = {item["status"] for item in stop["items"]}
             stop["status"] = (
                 "done"
-                if states <= {Delivery.Status.DELIVERED, Delivery.Status.SKIPPED}
+                if not states & set(OPEN)
                 else "part"
                 if Delivery.Status.DELIVERED in states
                 else "pending"
             )
+            balance = balances.get(stop["customer_id"], Decimal("0"))
+            # Only what is still to be handed over can overdraw the wallet.
+            stop["wallet_low"] = balance < stop.pop("to_charge")
             stop["value"] = money(stop["value"])
-            stop["wallet_balance"] = money(balances.get(stop["customer_id"], Decimal("0")))
-            stop["wallet_low"] = Decimal(stop["wallet_balance"]) < Decimal(stop["value"])
+            stop["wallet_balance"] = money(balance)
             out.append(stop)
 
         totals = rows.aggregate(items=Count("id"), value=Sum("total"))
         done = rows.filter(status=Delivery.Status.DELIVERED).count()
+        pending = rows.filter(status__in=OPEN).count()
 
         return Response(
             {
@@ -129,7 +156,7 @@ class RoundView(APIView):
                     "items": totals["items"] or 0,
                     "value": money(totals["value"]),
                     "done": done,
-                    "pending": (totals["items"] or 0) - done,
+                    "pending": pending,
                 },
                 "stops": out,
             }
@@ -143,8 +170,16 @@ class MarkView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        new_status = request.data.get("status", Delivery.Status.DELIVERED)
+        if new_status not in dict(Delivery.Status.choices):
+            return Response({"detail": "Unknown status."}, status=status.HTTP_400_BAD_REQUEST)
+
         ids = request.data.get("delivery_ids")
-        if not ids:
+        if ids:
+            if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+                return Response({"detail": "delivery_ids must be a list of ids."}, status=status.HTTP_400_BAD_REQUEST)
+            rows = Delivery.objects.filter(id__in=ids)
+        else:
             address = request.data.get("address")
             day = parse_date(request.data.get("date"), timezone.localdate())
             slot = request.data.get("slot", "morning")
@@ -153,25 +188,13 @@ class MarkView(APIView):
                     {"detail": "Send delivery_ids, or an address with a date and slot."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            ids = list(
-                Delivery.objects.filter(address_id=address, date=day, slot=slot).values_list("id", flat=True)
-            )
+            # A whole stop only moves what is still open: items the rider has
+            # already delivered or marked missed keep their status.
+            rows = Delivery.objects.filter(address_id=address, date=day, slot=slot, status__in=OPEN)
 
-        new_status = request.data.get("status", Delivery.Status.DELIVERED)
-        if new_status not in dict(Delivery.Status.choices):
-            return Response({"detail": "Unknown status."}, status=status.HTTP_400_BAD_REQUEST)
-
-        rows = Delivery.objects.filter(id__in=ids).select_related("user", "variant__product")
-        changed = 0
-        for row in rows:
-            if new_status == Delivery.Status.DELIVERED:
-                if row.mark_delivered() is not None:
-                    changed += 1
-            elif row.status != new_status:
-                row.status = new_status
-                row.save(update_fields=["status"])
-                changed += 1
-
+        changed = sum(
+            1 for row in rows.select_related("user", "variant__product") if row.set_status(new_status)
+        )
         return Response({"changed": changed, "detail": f"{changed} marked {new_status}."})
 
 
@@ -181,6 +204,7 @@ class MarkView(APIView):
 @api_view(["GET"])
 @permission_classes([IsFarmStaff])
 def overview(request):
+    ensure_roster()
     today = timezone.localdate()
     month_start = today.replace(day=1)
 
@@ -270,7 +294,7 @@ class CustomerViewSet(viewsets.ViewSet):
                     "id": u.id,
                     "name": u.full_name or "Unnamed",
                     "phone": u.phone,
-                    "joined": u.date_joined.date().isoformat(),
+                    "joined": timezone.localdate(u.date_joined).isoformat(),
                     "active_subscriptions": u.active_subs,
                     "wallet_balance": money(balances.get(u.id, Decimal("0"))),
                 }
@@ -298,7 +322,7 @@ class CustomerViewSet(viewsets.ViewSet):
                 "name": user.full_name or "Unnamed",
                 "phone": user.phone,
                 "email": user.email,
-                "joined": user.date_joined.date().isoformat(),
+                "joined": timezone.localdate(user.date_joined).isoformat(),
                 "wallet_balance": money(wallet.balance),
                 "addresses": [
                     {
@@ -347,15 +371,15 @@ class CustomerViewSet(viewsets.ViewSet):
     def topup(self, request, pk=None):
         """Record money the customer handed over. Cash, UPI, whatever."""
         user = get_object_or_404(User, pk=pk, is_staff=False)
-        try:
-            amount = Decimal(str(request.data.get("amount", "0")))
-        except (InvalidOperation, TypeError):
-            return Response({"detail": "Send a numeric amount."}, status=status.HTTP_400_BAD_REQUEST)
-        if amount <= 0 or amount > Decimal("50000"):
+        amount = parse_amount(request.data.get("amount"))
+        if amount is None:
             return Response({"detail": "Enter an amount between 1 and 50,000."}, status=status.HTTP_400_BAD_REQUEST)
 
         wallet = Wallet.for_user(user)
-        note = request.data.get("note") or f"Top-up taken by {request.user.get_short_name()}"
+        # Who took the money is always on the ledger, whatever note is typed.
+        taken_by = f"taken by {request.user.get_short_name()}"
+        custom = str(request.data.get("note") or "").strip()
+        note = f"{custom[:150]} · {taken_by}" if custom else f"Top-up {taken_by}"
         wallet.credit(amount, note)
         return Response({"balance": money(wallet.balance), "detail": f"Added {money(amount)}."})
 
@@ -363,11 +387,11 @@ class CustomerViewSet(viewsets.ViewSet):
 # --- Catalogue ---------------------------------------------------------------
 
 
-class StaffProductViewSet(viewsets.ModelViewSet):
+class StaffProductViewSet(viewsets.ReadOnlyModelViewSet):
     """Products and their prices, editable without touching a CMS."""
 
     permission_classes = [IsFarmStaff]
-    serializer_class = ProductSerializer
+    serializer_class = StaffProductSerializer
     pagination_class = None
     lookup_field = "slug"
 
@@ -377,11 +401,8 @@ class StaffProductViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="set-price")
     def set_price(self, request):
         variant = get_object_or_404(ProductVariant, pk=request.data.get("variant"))
-        try:
-            price = Decimal(str(request.data.get("price")))
-        except (InvalidOperation, TypeError):
-            return Response({"detail": "Send a numeric price."}, status=status.HTTP_400_BAD_REQUEST)
-        if price <= 0 or price > Decimal("100000"):
+        price = parse_amount(request.data.get("price"), high=Decimal("100000"))
+        if price is None:
             return Response({"detail": "That price looks wrong."}, status=status.HTTP_400_BAD_REQUEST)
 
         variant.price = price
@@ -389,7 +410,7 @@ class StaffProductViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "detail": f"{variant.product.name} {variant.label} is now {money(price)}.",
-                "note": "Existing subscriptions keep the price they signed up at.",
+                "note": "Baskets that already have it keep their price; new ones pay the new price.",
             }
         )
 
@@ -398,7 +419,14 @@ class StaffProductViewSet(viewsets.ModelViewSet):
         product = self.get_object()
         product.is_active = not product.is_active
         product.save(update_fields=["is_active"])
-        return Response({"is_active": product.is_active})
+        in_baskets = product_in_baskets(product)
+        detail = (
+            f"{product.name} is back in the shop."
+            if product.is_active
+            else f"{product.name} is hidden from the shop."
+            + (f" {in_baskets} basket item(s) still receive it until changed." if in_baskets else "")
+        )
+        return Response({"is_active": product.is_active, "in_baskets": in_baskets, "detail": detail})
 
 
 class StaffPackageViewSet(viewsets.ReadOnlyModelViewSet):
@@ -430,17 +458,31 @@ class ContentView(APIView):
         return Response(data)
 
     def patch(self, request):
-        page = HomePage.objects.first()
-        if page is None:
+        live = HomePage.objects.first()
+        if live is None:
             return Response({"detail": "No storefront page yet."}, status=status.HTTP_404_NOT_FOUND)
+        # Build on the latest revision, so a draft someone saved in the Wagtail
+        # admin is carried forward rather than thrown away.
+        page = live.get_latest_revision_as_object()
         touched = []
         for field in EDITABLE:
             if field in request.data:
-                setattr(page, field, request.data[field])
+                value = request.data[field]
+                if not isinstance(value, str):
+                    return Response({"detail": f"{field} must be text."}, status=status.HTTP_400_BAD_REQUEST)
+                setattr(page, field, value.strip())
                 touched.append(field)
         if not touched:
             return Response({"detail": "Nothing to change."}, status=status.HTTP_400_BAD_REQUEST)
-        page.save_revision().publish()
+        try:
+            page.full_clean()
+            page.save_revision(user=request.user).publish(user=request.user)
+        except DjangoValidationError as error:
+            messages = {field: " ".join(errors) for field, errors in error.message_dict.items()}
+            return Response(
+                {"detail": next(iter(messages.values()), "Please check the text."), "fields": messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response({"detail": "Website updated.", "changed": touched})
 
 
@@ -450,7 +492,10 @@ class ContentView(APIView):
 @api_view(["POST"])
 @permission_classes([IsFarmStaff])
 def rebuild_roster(request):
-    days = int(request.data.get("days") or 14)
+    try:
+        days = int(request.data.get("days") or 14)
+    except (TypeError, ValueError):
+        return Response({"detail": "days must be a whole number."}, status=status.HTTP_400_BAD_REQUEST)
     return Response(build_roster(days=min(max(days, 1), 60)))
 
 

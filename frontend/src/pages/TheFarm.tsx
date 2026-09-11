@@ -59,7 +59,7 @@ export function TheFarm() {
 
           <Reveal className="farmintro__fig">
             <div className="figure" style={{ aspectRatio: "3 / 2" }}>
-              <img {...photo("cow", 1200, 800)} />
+              <img {...photo("cow", 960, 640, "(min-width: 900px) 640px, 92vw")} />
               <div className="figure__over">
                 <span className="eyebrow">The herd, before the heat comes up</span>
               </div>

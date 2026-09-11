@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 
 from .models import Address, User, normalise_phone
@@ -6,7 +8,7 @@ from .models import Address, User, normalise_phone
 class PhoneField(serializers.CharField):
     def to_internal_value(self, data):
         phone = normalise_phone(super().to_internal_value(data))
-        if len(phone) != 10 or not phone.isdigit():
+        if not phone:
             raise serializers.ValidationError("Enter a valid 10 digit Indian mobile number.")
         return phone
 
@@ -17,7 +19,7 @@ class OTPRequestSerializer(serializers.Serializer):
 
 class OTPVerifySerializer(serializers.Serializer):
     phone = PhoneField()
-    code = serializers.CharField(min_length=6, max_length=6)
+    code = serializers.RegexField(r"^[0-9]{6}$", error_messages={"invalid": "The code is 6 digits."})
     full_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
 
 
@@ -26,8 +28,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "phone", "full_name", "email", "referral_code", "date_joined", "wallet_balance"]
-        read_only_fields = ["id", "phone", "referral_code", "date_joined"]
+        fields = ["id", "phone", "full_name", "email", "referral_code", "date_joined", "wallet_balance", "is_staff"]
+        read_only_fields = ["id", "phone", "referral_code", "date_joined", "is_staff"]
 
     def get_wallet_balance(self, obj):
         wallet = getattr(obj, "wallet", None)
@@ -45,7 +47,7 @@ class AddressSerializer(serializers.ModelSerializer):
         ]
 
     def validate_pincode(self, value):
-        if not (value.isdigit() and len(value) == 6):
+        if not re.fullmatch(r"[1-9][0-9]{5}", value or ""):
             raise serializers.ValidationError("Enter a valid 6 digit PIN code.")
         return value
 

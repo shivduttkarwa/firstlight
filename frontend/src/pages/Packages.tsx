@@ -4,7 +4,7 @@ import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Icon, Reveal, Skeletons, Spinner } from "../components/ui";
 import { ApiError, api, type Package } from "../lib/api";
-import { frequencyLabel, money, slotLabel, toISO } from "../lib/format";
+import { frequencyLabel, money, slotLabel } from "../lib/format";
 import { toast, useAuth } from "../store/useStore";
 
 export function Packages() {
@@ -115,7 +115,9 @@ export function PackageDetail() {
   const navigate = useNavigate();
   const user = useAuth((s) => s.user);
   const addresses = useAuth((s) => s.addresses);
+  const baskets = useAuth((s) => s.baskets);
   const loadBaskets = useAuth((s) => s.loadBaskets);
+  const current = baskets[0] ?? null;
 
   const [pkg, setPkg] = useState<Package | null>(null);
   const [addressId, setAddressId] = useState<number | null>(null);
@@ -152,17 +154,28 @@ export function PackageDetail() {
       toast("Add a delivery address first.");
       return;
     }
+    // One basket per household: starting a package replaces the one you have.
+    if (
+      current &&
+      !confirm(
+        `This replaces your current basket (${current.item_count} item${current.item_count === 1 ? "" : "s"}) ` +
+          `with ${pkg!.name}. Anything already packed still arrives. Continue?`,
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       await api.post("/subscriptions/from-package/", {
         package: pkg!.slug,
         address: addressId,
-        start_date: toISO(new Date()),
+        replace: !!current,
       });
       await loadBaskets();
       toast(`${pkg!.name} is on the round.`);
       navigate("/basket");
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409) await loadBaskets();
       toast(e instanceof ApiError ? e.message : "Could not start that package.", "error");
     } finally {
       setBusy(false);
@@ -261,7 +274,7 @@ export function PackageDetail() {
           <div className="mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
             <button className="btn btn--primary btn--lg btn--block" onClick={start} disabled={busy}>
               {busy ? <Spinner /> : null}
-              {user ? "Start this package" : "Sign in to start"}
+              {!user ? "Sign in to start" : current ? "Switch to this package" : "Start this package"}
             </button>
             <p className="hint center mt-1">Change any item, skip any day, pause whenever. No lock-in.</p>
           </div>

@@ -243,7 +243,7 @@ export function Offers() {
               aria-label={`${i + 1} of ${OFFERS.length}: ${offer.title}`}
             >
               <motion.div className="offer__media" variants={line}>
-                <img {...photo(offer.photo, 880, 700)} alt="" />
+                <img {...photo(offer.photo, 880, 700, "(min-width: 900px) 600px, 92vw")} alt="" />
                 <span className="offer__wash" />
 
                 <div className="offer__seal">

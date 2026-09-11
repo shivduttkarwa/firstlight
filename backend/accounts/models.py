@@ -1,3 +1,4 @@
+import re
 import secrets
 from datetime import timedelta
 
@@ -7,9 +8,23 @@ from django.db import models
 from django.utils import timezone
 
 
+MOBILE = re.compile(r"[6-9]\d{9}")
+
+
 def normalise_phone(value):
-    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
-    return digits[-10:]
+    """A 10 digit Indian mobile, from '98765 43210', '+91-98765-43210' or '098765 43210'.
+
+    Anything else comes back as '' rather than being trimmed into a different
+    person's number.
+    """
+    raw = re.sub(r"[\s\-().]", "", str(value or ""))
+    if raw.startswith("+91"):
+        raw = raw[3:]
+    elif len(raw) == 12 and raw.startswith("91"):
+        raw = raw[2:]
+    elif len(raw) == 11 and raw.startswith("0"):
+        raw = raw[1:]
+    return raw if raw.isascii() and MOBILE.fullmatch(raw) else ""
 
 
 class UserManager(BaseUserManager):
@@ -136,9 +151,18 @@ class OneTimeCode(models.Model):
             and self.expires_at > timezone.now()
         )
 
-    def consume(self):
-        self.consumed_at = timezone.now()
-        self.save(update_fields=["consumed_at"])
+    def _live(self):
+        return OneTimeCode.objects.filter(
+            pk=self.pk, consumed_at__isnull=True, attempts__lt=self.MAX_ATTEMPTS, expires_at__gt=timezone.now()
+        )
+
+    def verify(self, code):
+        """Compare and spend in one step. Counting a miss is a single conditional
+        UPDATE, so parallel guesses cannot all slip in under the attempt limit."""
+        if secrets.compare_digest(self.code, code):
+            return self._live().update(consumed_at=timezone.now()) == 1
+        self._live().update(attempts=models.F("attempts") + 1)
+        return False
 
 
 class Address(models.Model):

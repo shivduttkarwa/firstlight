@@ -1,5 +1,5 @@
 import { AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
 import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, SiteHeader, TabBar } from "./components/Shell";
 import { PageFade, Skeletons, Toaster } from "./components/ui";
@@ -12,12 +12,24 @@ import { PackageDetail, Packages } from "./pages/Packages";
 import { ProductDetail } from "./pages/ProductDetail";
 import { Shop } from "./pages/Shop";
 import { TheFarm } from "./pages/TheFarm";
-import { FarmCustomerDetail, FarmCustomers } from "./pages/farm/Customers";
-import { FarmLogin } from "./pages/farm/Login";
-import { FarmMore, FarmWebsite } from "./pages/farm/More";
-import { FarmProducts } from "./pages/farm/Products";
-import { FarmRound } from "./pages/farm/Round";
 import { useAuth } from "./store/useStore";
+
+// The farm desk is its own download: shoppers never load the office's pages.
+const farm = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+const FarmCustomers = farm(() => import("./pages/farm/Customers"), "FarmCustomers");
+const FarmCustomerDetail = farm(() => import("./pages/farm/Customers"), "FarmCustomerDetail");
+const FarmLogin = farm(() => import("./pages/farm/Login"), "FarmLogin");
+const FarmMore = farm(() => import("./pages/farm/More"), "FarmMore");
+const FarmWebsite = farm(() => import("./pages/farm/More"), "FarmWebsite");
+const FarmProducts = farm(() => import("./pages/farm/Products"), "FarmProducts");
+const FarmRound = farm(() => import("./pages/farm/Round"), "FarmRound");
+
+const Loading = () => (
+  <div className="shell" style={{ paddingTop: "var(--sp-8)" }}>
+    <Skeletons count={4} height={80} />
+  </div>
+);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -79,18 +91,16 @@ function FarmShell() {
   const ready = useAuth((s) => s.ready);
 
   if (!ready) {
-    return (
-      <div className="shell" style={{ paddingTop: "var(--sp-8)" }}>
-        <Skeletons count={4} height={80} />
-      </div>
-    );
+    return <Loading />;
   }
   if (!staff) return <Navigate to="/farm/login" replace />;
 
   return (
     <>
       <FarmNav />
-      <FadingOutlet />
+      <Suspense fallback={<Loading />}>
+        <FadingOutlet />
+      </Suspense>
       <TabBar tabs={FARM_TABS} />
     </>
   );
@@ -114,7 +124,14 @@ export default function App() {
       <main id="main" className="appmain">
         <Routes location={location}>
           {/* Farm desk */}
-          <Route path="/farm/login" element={<FarmLogin />} />
+          <Route
+            path="/farm/login"
+            element={
+              <Suspense fallback={<Loading />}>
+                <FarmLogin />
+              </Suspense>
+            }
+          />
           <Route path="/farm" element={<FarmShell />}>
             <Route index element={<FarmRound />} />
             <Route path="customers" element={<FarmCustomers />} />

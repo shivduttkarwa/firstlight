@@ -1,13 +1,16 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import serializers
 
 from accounts.models import Address
-from catalog.models import ProductVariant
+from catalog.models import ProductVariant, Slot
 from catalog.serializers import rendition_url
+from orders.models import Delivery
 
-from .models import DayOverride, Frequency, Package, PackageItem, Subscription, SubscriptionLine
+from .cutoffs import locked_slots
+from .models import DayOverride, Frequency, Package, PackageItem, Subscription, SubscriptionLine, line_total
 
 
 def product_brief(variant):
@@ -59,7 +62,13 @@ class DayOverrideSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionLineSerializer(serializers.ModelSerializer):
-    variant = serializers.PrimaryKeyRelatedField(queryset=ProductVariant.objects.filter(is_active=True))
+    variant = serializers.PrimaryKeyRelatedField(
+        queryset=ProductVariant.objects.filter(is_active=True, product__is_active=True).select_related("product")
+    )
+    quantity = serializers.IntegerField(min_value=1, max_value=20, required=False)
+    weekdays = serializers.ListField(
+        child=serializers.IntegerField(min_value=0, max_value=6), required=False, max_length=7
+    )
     product = serializers.SerializerMethodField()
     overrides = DayOverrideSerializer(many=True, read_only=True)
     per_delivery = serializers.SerializerMethodField()
@@ -79,32 +88,43 @@ class SubscriptionLineSerializer(serializers.ModelSerializer):
     def get_per_delivery(self, obj):
         return str(obj.unit_price * obj.quantity)
 
-    def validate(self, attrs):
-        frequency = attrs.get("frequency", getattr(self.instance, "frequency", Frequency.DAILY))
-        weekdays = attrs.get("weekdays", getattr(self.instance, "weekdays", []))
-        if frequency == Frequency.WEEKDAYS:
-            if not weekdays:
-                raise serializers.ValidationError({"weekdays": "Pick at least one day of the week."})
-            if any(not isinstance(d, int) or d < 0 or d > 6 for d in weekdays):
-                raise serializers.ValidationError({"weekdays": "Days must be 0 (Monday) to 6 (Sunday)."})
+    def _current(self, attrs, field, default=None):
+        return attrs.get(field, getattr(self.instance, field, default))
 
-        variant = attrs.get("variant", getattr(self.instance, "variant", None))
-        slot = attrs.get("slot", getattr(self.instance, "slot", None))
-        if variant and slot:
+    def validate(self, attrs):
+        if "weekdays" in attrs:
+            attrs["weekdays"] = sorted(set(attrs["weekdays"]))
+        if self._current(attrs, "frequency", Frequency.DAILY) == Frequency.WEEKDAYS and not self._current(
+            attrs, "weekdays", []
+        ):
+            raise serializers.ValidationError({"weekdays": "Pick at least one day of the week."})
+
+        # Checked on every write, not only when a slot is sent — a create that
+        # leaves the slot out still lands on the model's default round.
+        variant = self._current(attrs, "variant")
+        slot = self._current(attrs, "slot", Slot.MORNING)
+        if variant:
             product = variant.product
             if not product.is_subscribable:
                 raise serializers.ValidationError({"variant": f"{product.name} is not available on subscription."})
             if slot not in product.slots:
                 raise serializers.ValidationError({"slot": f"{product.name} does not go out on that round."})
+
+        start = self._current(attrs, "start_date") or timezone.localdate()
+        end = self._current(attrs, "end_date")
+        if self.instance is None and start < timezone.localdate():
+            raise serializers.ValidationError({"start_date": "Start today or later."})
+        if end and end < start:
+            raise serializers.ValidationError({"end_date": "The last day cannot be before the first."})
         return attrs
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
-    package = serializers.PrimaryKeyRelatedField(
-        queryset=Package.objects.filter(is_active=True), required=False, allow_null=True
-    )
-    lines = SubscriptionLineSerializer(many=True, read_only=True)
+    # Set only by starting from a package, so its discount cannot be attached
+    # to a basket filled with something else.
+    package = serializers.PrimaryKeyRelatedField(read_only=True)
+    lines = serializers.SerializerMethodField()
     address_summary = serializers.SerializerMethodField()
     package_name = serializers.CharField(source="package.name", read_only=True, default=None)
     monthly_estimate = serializers.SerializerMethodField()
@@ -120,14 +140,17 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["status", "resume_on", "discount_percent", "created_at"]
 
+    def get_lines(self, obj):
+        return SubscriptionLineSerializer(obj.active_lines, many=True, context=self.context).data
+
     def get_address_summary(self, obj):
         return f"{obj.address.line1}, {obj.address.village}"
 
     def get_monthly_estimate(self, obj):
-        return str(obj.monthly_estimate())
+        return str(obj.monthly_estimate(cached=True))
 
     def get_next_dates(self, obj):
-        return [d.isoformat() for d in obj.upcoming_dates(5)]
+        return [d.isoformat() for d in obj.upcoming_dates(5, cached=True)]
 
     def get_item_count(self, obj):
         return len(obj.active_lines)
@@ -139,9 +162,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
-        package = validated_data.get("package")
-        if package and not validated_data.get("discount_percent"):
-            validated_data["discount_percent"] = package.discount_percent
         return super().create(validated_data)
 
 
@@ -155,14 +175,34 @@ class BasketDaySerializer(serializers.Serializer):
 
 def basket_calendar(subscription, days=30, from_date=None):
     start = from_date or timezone.localdate()
+    now = timezone.now()
     overrides = subscription.override_map()
-    lines = subscription.active_lines
+
+    # A packed round goes out as it was rostered, whatever the basket says now,
+    # so for those slots the calendar shows the roster. Only today and tomorrow
+    # morning can be packed.
+    packed = {
+        (row.line_id, row.date): row.quantity
+        for row in Delivery.objects.filter(
+            subscription=subscription, date__gte=start, date__lte=start + timedelta(days=1)
+        ).exclude(status__in=[Delivery.Status.SKIPPED, Delivery.Status.FAILED])
+    }
+    packed_lines = {line_id for line_id, _ in packed}
+    lines = [line for line in subscription.lines.all() if line.is_active or line.id in packed_lines]
+
     out = []
     for i in range(days):
         day = start + timedelta(days=i)
-        entries = []
+        locked = locked_slots(day, now)
+        entries, total = [], Decimal("0")
         for line in lines:
-            quantity = line.quantity_on(day, overrides)
+            is_packed = line.slot in locked
+            if is_packed:
+                quantity = packed.get((line.id, day), 0)
+            elif line.is_active:
+                quantity = line.quantity_on(day, overrides)
+            else:
+                continue
             overridden = day in overrides.get(line.id, {})
             if quantity or overridden:
                 entries.append(
@@ -175,13 +215,18 @@ def basket_calendar(subscription, days=30, from_date=None):
                         "variant_label": line.variant.label,
                         "accent": line.variant.product.accent,
                         "overridden": overridden,
+                        "locked": is_packed,
                     }
                 )
+                if quantity:
+                    total += line_total(line.unit_price, quantity, subscription.discount_percent)
         out.append(
             {
                 "date": day.isoformat(),
-                "total": str(subscription.per_day_total(day, overrides)),
+                "total": str(total),
                 "lines": entries,
+                "locked": locked,
+                "paused": not subscription.is_running_on(day),
             }
         )
     return out

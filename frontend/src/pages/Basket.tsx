@@ -13,7 +13,7 @@ import {
   type CalendarDay,
   type CalendarLine,
 } from "../lib/api";
-import { WEEKDAYS, addDays, frequencyLabel, money, relativeDay, shortDate, slotLabel, toISO } from "../lib/format";
+import { WEEKDAYS, frequencyLabel, money, relativeDay, shortDate, slotLabel } from "../lib/format";
 import { toast, useAuth } from "../store/useStore";
 
 export function Basket() {
@@ -102,9 +102,12 @@ export function Basket() {
       await api.post(`/subscriptions/${basket!.id}/${path}/`, payload);
       if (message) toast(message);
       await loadBaskets();
-      await loadCalendar(basket!.id);
+      // A cancelled basket has no calendar to reload.
+      if (path !== "cancel") await loadCalendar(basket!.id);
+      return true;
     } catch (e) {
       toast(e instanceof ApiError ? e.message : "That did not work.", "error");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -112,6 +115,10 @@ export function Basket() {
 
   const paused = basket.status === "paused";
   const todayLines = calendar?.[0]?.lines.filter((l) => l.quantity > 0) ?? [];
+  // The farm's own dates, from the server's calendar, not the phone's clock.
+  const tomorrow = calendar?.[1];
+  const inAWeek = calendar?.[8];
+  const tomorrowPacked = !!tomorrow && basket.lines.every((l) => tomorrow.locked.includes(l.slot));
 
   return (
     <>
@@ -166,15 +173,16 @@ export function Basket() {
               <>
                 <button
                   className="btn btn--soft btn--sm"
-                  disabled={busy}
-                  onClick={() => void act("skip-day", { date: toISO(addDays(new Date(), 1)) }, "Tomorrow is off.")}
+                  disabled={busy || !tomorrow || tomorrowPacked}
+                  title={tomorrowPacked ? "Tomorrow's rounds are already packed." : undefined}
+                  onClick={() => tomorrow && void act("skip-day", { date: tomorrow.date }, "Tomorrow is off.")}
                 >
                   Skip tomorrow
                 </button>
                 <button
                   className="btn btn--soft btn--sm"
-                  disabled={busy}
-                  onClick={() => void act("pause", { resume_on: toISO(addDays(new Date(), 8)) }, "Paused for a week.")}
+                  disabled={busy || !inAWeek}
+                  onClick={() => inAWeek && void act("pause", { resume_on: inAWeek.date }, "Paused for a week.")}
                 >
                   Pause a week
                 </button>
@@ -261,7 +269,7 @@ export function Basket() {
             disabled={busy}
             onClick={() => {
               if (confirm("Cancel this basket? Your deliveries will stop.")) {
-                void act("cancel", undefined, "Basket cancelled.").then(() => navigate("/"));
+                void act("cancel", undefined, "Basket cancelled.").then((ok) => ok && navigate("/"));
               }
             }}
           >
@@ -433,7 +441,10 @@ function DaySheet({
           const usual = entry?.usual ?? 0;
           const saved = entry?.overridden ? entry.quantity : null;
           const current = line.id in draft ? draft[line.id] : saved;
-          return { line, usual, saved, current, shown: current ?? usual };
+          // A packed round shows what is actually going out, and cannot change.
+          const packed = day.locked.includes(line.slot);
+          const shown = packed ? (entry?.quantity ?? 0) : (current ?? usual);
+          return { line, usual, saved, current, shown, packed, frozen: packed || day.paused };
         })
     : [];
 
@@ -493,6 +504,9 @@ function DaySheet({
     >
       {day && (
         <>
+          {day.paused && (
+            <p className="notice mb-2">Your basket is paused on this day. Resume it to change anything.</p>
+          )}
           <p className="sm muted" style={{ marginBottom: "var(--sp-4)" }}>
             {shortDate(day.date)} ·{" "}
             {dirty
@@ -517,22 +531,29 @@ function DaySheet({
                   <div className="stepper">
                     <button
                       onClick={() => change(row, row.shown - 1)}
-                      disabled={busy || row.shown === 0}
-                      aria-label="Less"
+                      disabled={busy || row.frozen || row.shown === 0}
+                      aria-label={`One less ${row.line.product.name}`}
                     >
                       −
                     </button>
-                    <span className="num">{row.shown}</span>
+                    <span className="num" aria-live="polite">
+                      {row.shown}
+                    </span>
                     <button
                       onClick={() => change(row, row.shown + 1)}
-                      disabled={busy || row.shown >= 20}
-                      aria-label="More"
+                      disabled={busy || row.frozen || row.shown >= 20}
+                      aria-label={`One more ${row.line.product.name}`}
                     >
                       +
                     </button>
                   </div>
                 </div>
-                {row.current !== null && (
+                {row.packed && (
+                  <p className="tiny muted" style={{ marginTop: 10 }}>
+                    Packed — the {row.line.slot} round {row.line.slot === "morning" ? "closed at 9 pm the night before" : "closed at 1 pm"}.
+                  </p>
+                )}
+                {row.current !== null && !row.frozen && (
                   <button className="linkish" style={{ marginTop: 10 }} disabled={busy} onClick={() => change(row, row.usual)}>
                     Reset to usual (
                     {row.usual

@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_BASE ?? "/api";
+// `||`, not `??`: CI passes an unset variable through as "".
+const BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const ACCESS = "fl.access";
 const REFRESH = "fl.refresh";
@@ -36,20 +37,25 @@ export class ApiError extends Error {
   }
 }
 
+/** Set by the store: called once a login can no longer be renewed. */
+export const session = { expired: () => {} };
+
 let refreshing: Promise<boolean> | null = null;
 
 async function renew(): Promise<boolean> {
-  if (!tokens.refresh) return false;
+  const sent = tokens.refresh;
+  if (!sent) return false;
   refreshing ??= (async () => {
     try {
       const res = await fetch(`${BASE}/auth/refresh/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh: tokens.refresh }),
+        body: JSON.stringify({ refresh: sent }),
       });
-      if (!res.ok) return false;
+      // Another tab may have rotated the token first; if so, its new one is ours too.
+      if (!res.ok) return tokens.refresh !== sent && !!tokens.refresh;
       const data = await res.json();
-      tokens.set({ access: data.access, refresh: data.refresh ?? tokens.refresh! });
+      tokens.set({ access: data.access, refresh: data.refresh ?? sent });
       return true;
     } catch {
       return false;
@@ -63,15 +69,35 @@ async function renew(): Promise<boolean> {
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body) headers.set("Content-Type", "application/json");
-  if (tokens.access) headers.set("Authorization", `Bearer ${tokens.access}`);
+  const sentToken = tokens.access;
+  if (sentToken) headers.set("Authorization", `Bearer ${sentToken}`);
 
-  const res = await fetch(`${BASE}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, { detail: "No connection. Check your internet and try again." });
+  }
 
-  if (res.status === 401 && retry && (await renew())) return request<T>(path, init, false);
+  if (res.status === 401 && retry && sentToken) {
+    if (await renew()) return request<T>(path, init, false);
+    // The login is dead. Forget it, and try once more as a guest: a stale token
+    // is rejected even by public pages like the shop.
+    tokens.clear();
+    session.expired();
+    return request<T>(path, init, false);
+  }
   if (res.status === 204) return undefined as T;
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // An HTML error page from the server or a proxy, not our JSON.
+    data = { detail: res.ok ? "Unexpected reply from the server." : "Something went wrong on our side. Please try again." };
+    if (res.ok) throw new ApiError(res.status, data);
+  }
   if (!res.ok) throw new ApiError(res.status, data);
   return data as T;
 }
@@ -215,7 +241,12 @@ export interface CalendarDay {
     variant_label: string;
     accent: string;
     overridden: boolean;
+    /** The round is packed: this line can no longer change for this day. */
+    locked: boolean;
   }[];
+  /** Rounds already packed for this day. */
+  locked: Slot[];
+  paused: boolean;
 }
 
 export type CalendarLine = CalendarDay["lines"][number];
@@ -247,6 +278,7 @@ export interface User {
   referral_code: string;
   date_joined: string;
   wallet_balance: string;
+  is_staff: boolean;
 }
 
 export interface Delivery {
@@ -286,6 +318,8 @@ export interface Wallet {
   balance: string;
   updated_at: string;
   transactions: WalletTxn[];
+  /** Customers may add money themselves (demo only, until a payment gateway). */
+  can_top_up: boolean;
 }
 
 export interface Summary {

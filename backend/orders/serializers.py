@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
@@ -98,10 +99,14 @@ class WalletTransactionSerializer(serializers.ModelSerializer):
 
 class WalletSerializer(serializers.ModelSerializer):
     transactions = serializers.SerializerMethodField()
+    can_top_up = serializers.SerializerMethodField()
 
     class Meta:
         model = Wallet
-        fields = ["balance", "updated_at", "transactions"]
+        fields = ["balance", "updated_at", "transactions", "can_top_up"]
 
     def get_transactions(self, obj):
         return WalletTransactionSerializer(obj.transactions.all()[:20], many=True).data
+
+    def get_can_top_up(self, obj):
+        return settings.WALLET_SELF_TOPUP

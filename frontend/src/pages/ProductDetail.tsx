@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Icon, Sheet, Skeletons, Spinner } from "../components/ui";
-import { ApiError, api, type Frequency, type Product, type Slot, type Variant } from "../lib/api";
-import { WEEKDAYS, frequencyLabel, money, richTextToParagraphs, slotLabel, slotTime, toISO } from "../lib/format";
+import { ApiError, api, type Basket as TBasket, type Frequency, type Product, type Slot, type Variant } from "../lib/api";
+import { WEEKDAYS, frequencyLabel, money, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
 import { toast, useAuth } from "../store/useStore";
 
 export function ProductDetail() {
@@ -34,6 +34,21 @@ export function ProductDetail() {
         <div className="shell sect center">
           <h1 className="display">Not on the round</h1>
           <p className="lede mt-1">That one may have come off the list for the season.</p>
+          <Link to="/shop" className="btn btn--primary mt-3">
+            Back to the shop
+          </Link>
+        </div>
+      </>
+    );
+  }
+
+  if (product && !variant) {
+    return (
+      <>
+        <AppBar back title={product.name} />
+        <div className="shell sect center">
+          <h1 className="display">{product.name}</h1>
+          <p className="lede mt-1">Not available right now. Check back soon, or see what else is on the round.</p>
           <Link to="/shop" className="btn btn--primary mt-3">
             Back to the shop
           </Link>
@@ -183,10 +198,12 @@ function AddSheet({
     try {
       let target = basket;
       if (!target) {
-        target = await api.post("/subscriptions/", {
+        target = await api.post<TBasket>("/subscriptions/", {
           address: (addresses.find((a) => a.is_default) ?? addresses[0]).id,
-          start_date: toISO(new Date()),
         });
+        // Known to the store at once, so a retry after a failed line uses it
+        // rather than trying to start a second basket.
+        await loadBaskets();
       }
       await api.post("/basket-lines/", {
         subscription: target!.id,
@@ -195,7 +212,6 @@ function AddSheet({
         slot,
         frequency,
         weekdays: frequency === "weekdays" ? weekdays : [],
-        start_date: toISO(new Date()),
       });
       await loadBaskets();
       toast(`${product.name} added to your basket.`);
@@ -209,6 +225,7 @@ function AddSheet({
   }
 
   const perDelivery = Number(variant.price) * quantity;
+  const noDays = frequency === "weekdays" && weekdays.length === 0;
 
   return (
     <Sheet
@@ -216,7 +233,7 @@ function AddSheet({
       onClose={onClose}
       title={`Add ${product.name}`}
       footer={
-        <button className="btn btn--primary btn--lg btn--block" onClick={add} disabled={busy}>
+        <button className="btn btn--primary btn--lg btn--block" onClick={add} disabled={busy || noDays}>
           {busy ? <Spinner /> : null}
           {user ? `Add · ${money(perDelivery)} per delivery` : "Sign in to add"}
         </button>

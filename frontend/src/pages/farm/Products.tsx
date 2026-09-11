@@ -6,15 +6,17 @@ import { ApiError, api, type Product, type Variant } from "../../lib/api";
 import { money } from "../../lib/format";
 import { toast } from "../../store/useStore";
 
+type StaffProduct = Product & { is_active: boolean };
+
 export function FarmProducts() {
-  const [products, setProducts] = useState<Product[] | null>(null);
+  const [products, setProducts] = useState<StaffProduct[] | null>(null);
   const [editing, setEditing] = useState<{ product: Product; variant: Variant } | null>(null);
   const [price, setPrice] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setProducts(await api.get<Product[]>("/farm/products/"));
+      setProducts(await api.get<StaffProduct[]>("/farm/products/"));
     } catch {
       setProducts([]);
     }
@@ -41,10 +43,10 @@ export function FarmProducts() {
     }
   }
 
-  async function toggle(product: Product) {
+  async function toggle(product: StaffProduct) {
     try {
-      const res = await api.post<{ is_active: boolean }>(`/farm/products/${product.slug}/toggle/`);
-      toast(res.is_active ? `${product.name} is back on sale.` : `${product.name} is hidden from the shop.`);
+      const res = await api.post<{ is_active: boolean; detail: string }>(`/farm/products/${product.slug}/toggle/`);
+      toast(res.detail);
       await load();
     } catch {
       toast("Could not update.", "error");
@@ -56,7 +58,7 @@ export function FarmProducts() {
       <AppBar title="Products & prices" />
       <div className="shell">
         <p className="sm muted">
-          Tap a pack size to change its price. Customers who already subscribed keep the price they signed up at.
+          Tap a pack size to change its price. Baskets that already have it keep their price; new ones pay the new one.
         </p>
 
         <div className="mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
@@ -65,7 +67,7 @@ export function FarmProducts() {
           ) : (
             <div className="stack flow-sm farmgrid">
               {products.map((p) => (
-                <div key={p.id} className="card card--pad" style={{ opacity: p.is_subscribable ? 1 : 0.7 }}>
+                <div key={p.id} className="card card--pad" style={{ opacity: p.is_active && p.is_subscribable ? 1 : 0.7 }}>
                   <div className="inline" style={{ flexWrap: "nowrap", gap: "var(--sp-3)" }}>
                     <span
                       className="row__art"
@@ -74,11 +76,18 @@ export function FarmProducts() {
                       <ProductArt kind={p.kind} accent={p.accent} size="70%" />
                     </span>
                     <span className="row__main">
-                      <span className="row__t">{p.name}</span>
+                      <span className="row__t">
+                        {p.name}
+                        {!p.is_active && (
+                          <span className="tag tag--paused" style={{ marginLeft: 8 }}>
+                            Hidden
+                          </span>
+                        )}
+                      </span>
                       <span className="row__s">{p.tagline}</span>
                     </span>
                     <button className="btn btn--ghost btn--sm" onClick={() => void toggle(p)}>
-                      Hide
+                      {p.is_active ? "Hide" : "Show"}
                     </button>
                   </div>
 
@@ -120,7 +129,7 @@ export function FarmProducts() {
         onClose={() => setEditing(null)}
         title={editing ? `${editing.product.name} · ${editing.variant.label}` : ""}
         footer={
-          <button className="btn btn--primary btn--lg btn--block" onClick={savePrice} disabled={busy || !Number(price)}>
+          <button className="btn btn--primary btn--lg btn--block" onClick={savePrice} disabled={busy || !/^\d+(\.\d{1,2})?$/.test(price) || Number(price) < 1}>
             {busy ? <Spinner /> : null} Set price to {money(price || 0)}
           </button>
         }
@@ -137,8 +146,8 @@ export function FarmProducts() {
           />
         </div>
         <p className="hint">
-          This is what new customers will pay. Anyone already subscribed keeps their old price until they change
-          their basket.
+          This is what new basket items will cost. Items already in a basket keep their price, unless the customer
+          switches them to a different pack size.
         </p>
       </Sheet>
     </>
