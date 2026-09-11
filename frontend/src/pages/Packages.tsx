@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProductArt } from "../components/ProductArt";
+import { ask } from "../components/Confirm";
 import { AppBar } from "../components/Shell";
 import { Icon, Reveal, Skeletons, Spinner } from "../components/ui";
 import { ApiError, api, type Package } from "../lib/api";
@@ -157,10 +158,36 @@ export function PackageDetail() {
     // One basket per household: starting a package replaces the one you have.
     if (
       current &&
-      !confirm(
-        `This replaces your current basket (${current.item_count} item${current.item_count === 1 ? "" : "s"}) ` +
-          `with ${pkg!.name}. Anything already packed still arrives. Continue?`,
-      )
+      !(await ask({
+        title: `Switch to ${pkg!.name}?`,
+        body: (
+          <>
+            <div className="confirm__swap">
+              <div>
+                <span className="eyebrow eyebrow--bare muted">Now</span>
+                <b>{current.package_name ?? "Your basket"}</b>
+                <span className="tiny muted">
+                  {current.item_count} item{current.item_count === 1 ? "" : "s"} · {money(current.monthly_estimate)}/mo
+                </span>
+              </div>
+              <Icon.arrow />
+              <div>
+                <span className="eyebrow eyebrow--bare muted">After</span>
+                <b>{pkg!.name}</b>
+                <span className="tiny muted">
+                  {pkg!.items.length} item{pkg!.items.length === 1 ? "" : "s"} · {money(pkg!.monthly_estimate)}/mo
+                </span>
+              </div>
+            </div>
+            <p className="mt-2">
+              Your current basket stops from the next open round — anything already packed still arrives. You can change
+              any item afterwards.
+            </p>
+          </>
+        ),
+        confirm: "Switch package",
+        cancel: "Keep my basket",
+      }))
     ) {
       return;
     }

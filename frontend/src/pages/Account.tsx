@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AddressForm } from "../components/AddressForm";
 import { ProductArt } from "../components/ProductArt";
+import { ask } from "../components/Confirm";
 import { AppBar } from "../components/Shell";
 import { Empty, Icon, Sheet, Skeletons, Spinner } from "../components/ui";
 import {
@@ -213,7 +214,7 @@ export function Account() {
           </div>
 
           <button
-            className="btn btn--ghost btn--block btn--desk-auto mt-3"
+            className="btn btn--ghost mt-3"
             style={{ marginBottom: "var(--sp-8)" }}
             onClick={() => {
               signOut();
@@ -523,7 +524,14 @@ export function Addresses() {
   }
 
   async function remove(a: Address) {
-    if (!confirm(`Remove ${a.line1}?`)) return;
+    const sure = await ask({
+      title: "Remove this address?",
+      body: `${a.line1}, ${a.village} ${a.pincode}`,
+      confirm: "Remove",
+      cancel: "Keep it",
+      danger: true,
+    });
+    if (!sure) return;
     try {
       await api.del(`/addresses/${a.id}/`);
       await loadAddresses();

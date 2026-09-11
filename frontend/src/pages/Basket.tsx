@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ProductArt } from "../components/ProductArt";
+import { ask } from "../components/Confirm";
 import { AppBar } from "../components/Shell";
 import { Empty, Icon, Sheet, Skeletons, Spinner } from "../components/ui";
 import {
@@ -267,10 +268,15 @@ export function Basket() {
           <button
             className="btn btn--danger btn--block btn--desk-auto"
             disabled={busy}
-            onClick={() => {
-              if (confirm("Cancel this basket? Your deliveries will stop.")) {
-                void act("cancel", undefined, "Basket cancelled.").then((ok) => ok && navigate("/"));
-              }
+            onClick={async () => {
+              const sure = await ask({
+                title: "Cancel your basket?",
+                body: "Deliveries stop from the next open round — anything already packed still arrives. Your wallet balance stays yours.",
+                confirm: "Cancel basket",
+                cancel: "Keep it",
+                danger: true,
+              });
+              if (sure && (await act("cancel", undefined, "Basket cancelled."))) navigate("/");
             }}
           >
             Cancel subscription
@@ -614,7 +620,14 @@ function LineSheet({
   }
 
   async function remove() {
-    if (!confirm(`Remove ${draft!.product.name} from your basket?`)) return;
+    const sure = await ask({
+      title: `Remove ${draft!.product.name}?`,
+      body: "It stops from the next open round. Past deliveries stay in your history.",
+      confirm: "Remove",
+      cancel: "Keep it",
+      danger: true,
+    });
+    if (!sure) return;
     setBusy(true);
     try {
       await api.del(`/basket-lines/${draft!.id}/`);

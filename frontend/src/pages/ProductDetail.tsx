@@ -136,7 +136,7 @@ export function ProductDetail() {
 
           <div className="mt-3" style={{ paddingBottom: "var(--sp-6)" }}>
             {product.is_subscribable ? (
-              <button className="btn btn--primary btn--lg btn--block" onClick={() => setAdding(true)}>
+              <button className="btn btn--primary btn--lg btn--block pdp__cta" onClick={() => setAdding(true)}>
                 Add to my basket · {money(variant.price)}
               </button>
             ) : (

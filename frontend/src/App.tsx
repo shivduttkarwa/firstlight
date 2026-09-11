@@ -1,6 +1,7 @@
 import { AnimatePresence } from "framer-motion";
 import { Suspense, lazy, useEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
+import { ConfirmHost } from "./components/Confirm";
 import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, SiteHeader, TabBar } from "./components/Shell";
 import { PageFade, Skeletons, Toaster } from "./components/ui";
 import { Account, Addresses, Deliveries, WalletPage } from "./pages/Account";
@@ -165,6 +166,7 @@ export default function App() {
       </main>
 
       <ScrollToTop />
+      <ConfirmHost />
       <Toaster />
     </div>
   );
