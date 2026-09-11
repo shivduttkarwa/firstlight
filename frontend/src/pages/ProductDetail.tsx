@@ -60,7 +60,7 @@ export function ProductDetail() {
 
   return (
     <>
-      <AppBar back />
+      <AppBar back crumb={product.name} />
 
       <div className="shell pdp">
         <motion.div

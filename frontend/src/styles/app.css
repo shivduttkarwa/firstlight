@@ -76,15 +76,14 @@
   fill: rgba(255, 255, 255, 0.18);
 }
 .appbar--over .topnav a {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.72);
 }
-.appbar--over .topnav a:hover {
-  background: rgba(255, 255, 255, 0.16);
+.appbar--over .topnav a::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+.appbar--over .topnav a:hover,
+.appbar--over .topnav a[aria-current="page"] {
   color: #fff;
-}
-.appbar--over .topnav a.on {
-  background: #fff;
-  color: var(--pine-950);
 }
 .appbar--over .iconbtn {
   color: #fff;
@@ -218,28 +217,54 @@
   }
 }
 
-/* Desktop nav lives in the top bar instead */
+/* Desktop nav lives in the top bar instead. The current section is marked the
+   way the phone tabs are: a lime rule, here along the bottom edge of the bar. */
 .topnav {
   display: none;
-  align-items: center;
-  gap: 0.1rem;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 2.1rem;
   margin-left: auto;
 }
 .topnav a {
-  padding: 0.5rem 0.85rem;
-  border-radius: var(--r-sm);
-  font-size: 0.92rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-size: 0.93rem;
   font-weight: 500;
-  color: var(--ink-2);
-  transition: background 0.18s, color 0.18s;
+  color: var(--ink-3);
+  transition: color 0.18s;
+}
+.topnav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--line);
+  transform: scaleX(0);
+  transition: transform 0.22s var(--ease);
 }
 .topnav a:hover {
-  background: var(--line-2);
   color: var(--ink);
 }
-.topnav a.on {
-  background: var(--ink);
-  color: var(--bg);
+.topnav a:hover::after {
+  transform: scaleX(1);
+}
+.topnav a[aria-current="page"] {
+  color: var(--ink);
+}
+.topnav a[aria-current="page"]::after {
+  display: none;
+}
+.topnav__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--accent);
 }
 @media (min-width: 900px) {
   .topnav {
@@ -2461,7 +2486,7 @@
 .appbar__phone {
   display: contents;
 }
-.sitenav,
+.sitehead,
 .pagebar,
 .sitefoot,
 .auth__panel {
@@ -2474,15 +2499,24 @@
 }
 
 @media (min-width: 900px) {
-  .appbar--site .appbar__phone {
+  .appbar--site {
     display: none;
   }
-  .appbar--site {
+  .sitehead {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    height: calc(var(--bar-h) + var(--safe-t));
+    padding-top: var(--safe-t);
+    padding-inline: max(var(--pad), calc((100% - var(--shell)) / 2 + var(--pad)));
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: saturate(1.2) blur(14px);
     box-shadow: 0 1px 0 var(--line);
+    transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
   }
-  .appbar--site.appbar--over {
+  .sitehead.appbar--over {
     background: transparent;
     backdrop-filter: none;
     box-shadow: none;
@@ -2490,6 +2524,7 @@
 
   .sitenav {
     display: flex;
+    align-self: stretch;
     align-items: center;
     gap: var(--sp-6);
     width: 100%;
@@ -2525,9 +2560,8 @@
     box-shadow: inset 0 0 0 1px var(--ink-3);
   }
   .sitenav__btn.on {
-    background: var(--ink);
-    color: var(--bg);
-    box-shadow: none;
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1.5px var(--ink);
   }
   .sitenav__count {
     min-width: 20px;
@@ -2574,28 +2608,6 @@
     margin-inline: auto;
     padding: var(--sp-6) var(--pad) var(--sp-5);
   }
-  .pagebar__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    height: 34px;
-    padding: 0 0.8rem 0 0.55rem;
-    border-radius: var(--r-sm);
-    background: var(--surface);
-    box-shadow: var(--ring);
-    font-size: 0.86rem;
-    font-weight: 500;
-    color: var(--ink-2);
-    transition: box-shadow 0.18s, color 0.18s;
-  }
-  .pagebar__back:hover {
-    color: var(--ink);
-    box-shadow: inset 0 0 0 1px var(--ink-3);
-  }
-  .pagebar__back svg {
-    width: 16px;
-    height: 16px;
-  }
   .pagebar__crumbs {
     display: inline-flex;
     align-items: center;
@@ -2620,7 +2632,7 @@
     flex-direction: column;
     padding-bottom: 0;
   }
-  .appmain:has(.sitefoot) > :first-child {
+  .appmain:has(.sitefoot) > .page {
     flex: 1 0 auto;
   }
   .sitefoot {
@@ -3142,6 +3154,133 @@
     align-self: center;
     width: 100%;
     max-width: 460px;
+  }
+}
+
+/* ── Readable lines, sized actions ─────────────────────────────────── */
+
+.lede,
+.measure {
+  max-width: 62ch;
+}
+.center .lede {
+  margin-inline: auto;
+}
+
+.statgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+  margin-top: var(--sp-4);
+}
+
+.story {
+  display: grid;
+  gap: var(--sp-4);
+}
+.story__fig {
+  aspect-ratio: 16 / 10;
+}
+.story__text p {
+  max-width: 62ch;
+}
+
+/* The closing call to action: a dark slab with a lime glow, not a lone button. */
+.ctaband {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--sp-8) var(--sp-5);
+  border-radius: var(--r-xl);
+  background: var(--panel);
+  color: var(--on-panel);
+}
+.ctaband::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -25%;
+  bottom: -70%;
+  width: 80%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent), transparent 62%);
+}
+.ctaband .eyebrow {
+  color: var(--accent);
+}
+.ctaband h2 {
+  color: #fff;
+}
+.ctaband p {
+  max-width: 46ch;
+  color: var(--on-panel-dim);
+}
+.ctaband__actions {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-6);
+}
+.ctaband__ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--on-panel);
+  --btn-ring: var(--on-panel-line);
+}
+
+@media (min-width: 900px) {
+  .btn--desk-auto {
+    width: auto;
+  }
+
+  .statgrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-8);
+    margin-top: var(--sp-5);
+  }
+
+  .story {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: var(--sp-6);
+    align-items: stretch;
+  }
+  .story__fig {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 420px;
+  }
+  .story__text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--sp-10) var(--sp-8);
+  }
+
+  .ctaband {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-10);
+    padding: var(--sp-12);
+  }
+  .ctaband__actions {
+    display: flex;
+    flex: none;
+    margin-top: 0;
+  }
+
+  .farmgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-4);
+    align-items: start;
+  }
+  .farmgrid > * + * {
+    margin-top: 0;
+  }
+  .shell--form > * {
+    max-width: 760px;
+  }
+  .shell--narrow {
+    max-width: calc(460px + 2 * var(--pad));
   }
 }
 

@@ -189,6 +189,7 @@ export function Reveal({
 export function PageFade({ children }: { children: ReactNode }) {
   return (
     <motion.div
+      className="page"
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}

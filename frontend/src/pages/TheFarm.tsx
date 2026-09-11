@@ -135,12 +135,12 @@ export function TheFarm() {
             style={{ background: "var(--panel)", color: "var(--on-panel)", marginBottom: "var(--sp-8)" }}
           >
             <h2 className="h3">Ninety minutes, gate to gate.</h2>
-            <p className="sm mt-2" style={{ color: "var(--on-panel-dim)" }}>
+            <p className="sm mt-2 measure" style={{ color: "var(--on-panel-dim)" }}>
               The morning milking starts at half past four. By half past five the cans are on the road, and most of
               Suratgarh has milk before six. Nothing is chilled overnight, nothing is pooled with another farm&rsquo;s,
               and nothing is standardised to hit a number on a label.
             </p>
-            <p className="sm mt-2" style={{ color: "var(--on-panel-dim)" }}>
+            <p className="sm mt-2 measure" style={{ color: "var(--on-panel-dim)" }}>
               That is also why the fat varies a little through the year. It follows the season and what the animals
               are eating, the way it always did.
             </p>

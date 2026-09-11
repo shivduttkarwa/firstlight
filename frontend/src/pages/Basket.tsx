@@ -257,7 +257,7 @@ export function Basket() {
           {calendar && <ChangesList days={calendar} onPick={setDayOpen} />}
 
           <button
-            className="btn btn--danger btn--block"
+            className="btn btn--danger btn--block btn--desk-auto"
             disabled={busy}
             onClick={() => {
               if (confirm("Cancel this basket? Your deliveries will stop.")) {

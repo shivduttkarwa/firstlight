@@ -212,7 +212,7 @@ export function Account() {
           </div>
 
           <button
-            className="btn btn--ghost btn--block mt-3"
+            className="btn btn--ghost btn--block btn--desk-auto mt-3"
             style={{ marginBottom: "var(--sp-8)" }}
             onClick={() => {
               signOut();

@@ -15,15 +15,29 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-/** Top bar. Shows the brand on root screens and a back arrow on deeper ones. */
+const PARENTS: Record<string, string> = { "/shop": "Shop", "/packages": "Packages", "/account": "You" };
+
+/** The section a deeper page sits under, for the desktop breadcrumb. */
+function parentOf(pathname: string, back?: boolean | string): [string, string] | null {
+  if (typeof back === "string" && PARENTS[back]) return [PARENTS[back], back];
+  if (pathname.startsWith("/product/")) return ["Shop", "/shop"];
+  if (pathname.startsWith("/packages/")) return ["Packages", "/packages"];
+  return null;
+}
+
+/** Top bar. Shows the brand on root screens and a back arrow on deeper ones.
+    On a desktop the site header takes over, and this becomes a breadcrumb. */
 export function AppBar({
   title,
+  crumb,
   back,
   right,
   over = false,
   transparentUntil = 8,
 }: {
   title?: string;
+  /** Breadcrumb label on a desktop, when the phone bar shows no title. */
+  crumb?: string;
   back?: boolean | string;
   right?: ReactNode;
   /** The page starts with a full-bleed dark image, so go light until scrolled. */
@@ -32,8 +46,11 @@ export function AppBar({
 }) {
   const [solid, setSolid] = useState(false);
   const navigate = useNavigate();
-  const site = !useLocation().pathname.startsWith("/farm");
+  const { pathname } = useLocation();
+  const site = !pathname.startsWith("/farm");
   const goBack = () => (typeof back === "string" ? navigate(back) : navigate(-1));
+  const parent = parentOf(pathname, back);
+  const current = crumb ?? title;
 
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > (over ? 120 : transparentUntil));
@@ -67,23 +84,26 @@ export function AppBar({
 
           {right}
         </div>
-
-        {site && <SiteNav />}
       </header>
 
-      {site && (back || title || right) && (
+      {site && (parent || current || right) && (
         <div className="pagebar">
-          {back ? (
-            <button className="pagebar__back" onClick={goBack}>
-              <Icon.back /> Back
-            </button>
-          ) : null}
-          {title && (
-            <span className="pagebar__crumbs">
+          {(parent || current) && (
+            <nav className="pagebar__crumbs" aria-label="Breadcrumb">
               <Link to="/">Home</Link>
-              <span aria-hidden="true">/</span>
-              <span aria-current="page">{title}</span>
-            </span>
+              {parent && (
+                <>
+                  <span aria-hidden="true">/</span>
+                  {current ? <Link to={parent[1]}>{parent[0]}</Link> : <span aria-current="page">{parent[0]}</span>}
+                </>
+              )}
+              {current && (
+                <>
+                  <span aria-hidden="true">/</span>
+                  <span aria-current="page">{current}</span>
+                </>
+              )}
+            </nav>
           )}
           {right && <span className="pagebar__end">{right}</span>}
         </div>
@@ -92,13 +112,47 @@ export function AppBar({
   );
 }
 
-const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? "on" : "");
+/** The desktop header, mounted once by the shell so it survives navigation.
+    Shown from 900px, where the bottom tabs are hidden. */
+export function SiteHeader() {
+  const { pathname } = useLocation();
+  const user = useAuth((s) => s.user);
+  const over = pathname === "/" && !user;
+  const [scrolled, setScrolled] = useState(false);
 
-/** The desktop header: shown from 900px, where the bottom tabs are hidden. */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > (over ? 120 : 8));
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [over]);
+
+  return (
+    <header className={`sitehead${over && !scrolled ? " appbar--over" : ""}`}>
+      <SiteNav />
+    </header>
+  );
+}
+
+const SITE_NAV: [string, string][] = [
+  ["Home", "/"],
+  ["Shop", "/shop"],
+  ["Packages", "/packages"],
+  ["How it works", "/how-it-works"],
+  ["The farm", "/the-farm"],
+];
+
+function sectionOf(pathname: string) {
+  if (pathname === "/") return "/";
+  if (pathname.startsWith("/product/")) return "/shop";
+  return SITE_NAV.find(([, to]) => to !== "/" && pathname.startsWith(to))?.[1] ?? null;
+}
+
 function SiteNav() {
   const user = useAuth((s) => s.user);
   const count = useAuth((s) => s.baskets[0]?.item_count ?? 0);
   const first = user?.full_name?.split(" ")[0] || "Account";
+  const section = sectionOf(useLocation().pathname);
 
   return (
     <div className="sitenav">
@@ -108,21 +162,18 @@ function SiteNav() {
       </Link>
 
       <nav className="topnav" aria-label="Main">
-        <NavLink to="/" end className={navClass}>
-          Home
-        </NavLink>
-        <NavLink to="/shop" className={navClass}>
-          Shop
-        </NavLink>
-        <NavLink to="/packages" className={navClass}>
-          Packages
-        </NavLink>
-        <NavLink to="/how-it-works" className={navClass}>
-          How it works
-        </NavLink>
-        <NavLink to="/the-farm" className={navClass}>
-          The farm
-        </NavLink>
+        {SITE_NAV.map(([label, to]) => (
+          <Link key={to} to={to} aria-current={section === to ? "page" : undefined}>
+            {label}
+            {section === to && (
+              <motion.span
+                layoutId="topnav-bar"
+                className="topnav__bar"
+                transition={{ type: "spring", damping: 34, stiffness: 420 }}
+              />
+            )}
+          </Link>
+        ))}
       </nav>
 
       <div className="sitenav__end">

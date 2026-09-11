@@ -63,7 +63,7 @@ export function FarmProducts() {
           {products === null ? (
             <Skeletons count={4} height={140} />
           ) : (
-            <div className="stack flow-sm">
+            <div className="stack flow-sm farmgrid">
               {products.map((p) => (
                 <div key={p.id} className="card card--pad" style={{ opacity: p.is_subscribable ? 1 : 0.7 }}>
                   <div className="inline" style={{ flexWrap: "nowrap", gap: "var(--sp-3)" }}>

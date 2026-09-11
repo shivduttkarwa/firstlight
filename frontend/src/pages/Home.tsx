@@ -153,14 +153,7 @@ export function Home() {
                 <span className="eyebrow eyebrow--bare" style={{ color: "var(--on-panel-dim)" }}>
                   Firstlight in numbers
                 </span>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "var(--sp-5)",
-                    marginTop: "var(--sp-4)",
-                  }}
-                >
+                <div className="statgrid">
                   {stats.map((s) => (
                     <div key={s.label}>
                       <div
@@ -189,14 +182,14 @@ export function Home() {
 
       <section className="sect" style={{ paddingTop: 0 }}>
         <div className="shell">
-          <Reveal>
-            <div className="figure" style={{ aspectRatio: "16 / 10", marginBottom: "var(--sp-4)" }}>
-              <img {...photo("field", 900, 560)} />
+          <Reveal className="story">
+            <div className="figure story__fig">
+              <img {...photo("field", 1100, 820)} />
               <div className="figure__over">
                 <span className="eyebrow">Sriganganagar, 5.10 am</span>
               </div>
             </div>
-            <div className="card card--pad">
+            <div className="card card--pad story__text">
               <span className="eyebrow">Why us</span>
               <h2 className="h3 mt-1">{content?.story_heading ?? "One farm. Two milkings."}</h2>
               {story.slice(0, 2).map((p, i) => (
@@ -219,9 +212,23 @@ export function Home() {
 
       {!user && (
         <section className="shell" style={{ paddingBottom: "var(--sp-10)" }}>
-          <Link to="/packages" className="btn btn--primary btn--lg btn--block">
-            Start a subscription <Icon.arrow />
-          </Link>
+          <Reveal>
+            <div className="ctaband">
+              <div className="ctaband__copy">
+                <span className="eyebrow">Ready when you are</span>
+                <h2 className="h2 mt-1">Milk at your gate before six.</h2>
+                <p className="mt-1">Pick a package in two taps. Skip, pause or change any day — no lock-in.</p>
+              </div>
+              <div className="ctaband__actions">
+                <Link to="/packages" className="btn btn--primary btn--lg">
+                  Start a subscription <Icon.arrow />
+                </Link>
+                <Link to="/shop" className="btn btn--lg ctaband__ghost">
+                  Browse the shop
+                </Link>
+              </div>
+            </div>
+          </Reveal>
         </section>
       )}
     </>

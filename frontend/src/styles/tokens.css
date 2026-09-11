@@ -67,10 +67,10 @@
   --bad-soft: var(--red-100);
 
   /* Dark panels sitting inside a light page. */
-  --panel: var(--pine-950);
-  --panel-2: var(--pine-800);
+  --panel: #0f5a47;
+  --panel-2: #146b55;
   --on-panel: #eaf3ee;
-  --on-panel-dim: #8fb3a6;
+  --on-panel-dim: #b8d6cb;
   --on-panel-line: rgba(234, 243, 238, 0.14);
   --on-panel-bad: #ff8a7a;
 
@@ -196,8 +196,8 @@
     --bad-soft: rgba(255, 117, 101, 0.16);
 
     /* In dark the slab has to sit above the page, not below it. */
-    --panel: #10261e;
-    --panel-2: #17362b;
+    --panel: #0f5a47;
+    --panel-2: #146b55;
 
     --sh-1: 0 1px 1px rgba(0, 0, 0, 0.3);
     --sh-2: 0 2px 6px -2px rgba(0, 0, 0, 0.5);

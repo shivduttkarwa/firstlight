@@ -38,7 +38,7 @@ export function FarmLogin() {
   return (
     <>
       <AppBar back="/" />
-      <div className="shell" style={{ paddingTop: "var(--sp-6)" }}>
+      <div className="shell shell--narrow" style={{ paddingTop: "var(--sp-6)" }}>
         <Logo className="" />
         <h1 className="display mt-3">Farm desk.</h1>
         <p className="lede mt-1">For the people who run Firstlight.</p>

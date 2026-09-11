@@ -1,7 +1,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
-import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, TabBar } from "./components/Shell";
+import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, SiteHeader, TabBar } from "./components/Shell";
 import { PageFade, Skeletons, Toaster } from "./components/ui";
 import { Account, Addresses, Deliveries, WalletPage } from "./pages/Account";
 import { Basket } from "./pages/Basket";
@@ -55,9 +55,20 @@ function FadingOutlet() {
 function CustomerShell() {
   return (
     <>
+      <SiteHeader />
       <FadingOutlet />
       <SiteFooter />
       <TabBar tabs={CUSTOMER_TABS} />
+    </>
+  );
+}
+
+/** Sign-in: the site header, but no tabs or footer. */
+function AuthShell() {
+  return (
+    <>
+      <SiteHeader />
+      <FadingOutlet />
     </>
   );
 }
@@ -130,7 +141,9 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
 
-          <Route path="/login" element={<Login />} />
+          <Route element={<AuthShell />}>
+            <Route path="/login" element={<Login />} />
+          </Route>
         </Routes>
       </main>
 

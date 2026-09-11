@@ -199,7 +199,7 @@ export function FarmWebsite() {
   return (
     <>
       <AppBar back="/farm/more" title="Website text" />
-      <div className="shell">
+      <div className="shell shell--form">
         <p className="sm muted">
           These are the words on your public page. Change them here and they go live immediately.
         </p>
@@ -233,7 +233,7 @@ export function FarmWebsite() {
         </div>
 
         <div className="mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
-          <button className="btn btn--primary btn--lg btn--block" onClick={save} disabled={busy || !dirty}>
+          <button className="btn btn--primary btn--lg btn--block btn--desk-auto" onClick={save} disabled={busy || !dirty}>
             {busy ? <Spinner /> : null} {dirty ? "Save and publish" : "Nothing to save"}
           </button>
         </div>
