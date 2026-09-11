@@ -4,7 +4,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Empty, Icon, Sheet, Skeletons, Spinner } from "../components/ui";
-import { ApiError, api, type Basket as TBasket, type BasketLine, type CalendarDay } from "../lib/api";
+import {
+  ApiError,
+  api,
+  changedLines,
+  type Basket as TBasket,
+  type BasketLine,
+  type CalendarDay,
+  type CalendarLine,
+} from "../lib/api";
 import { WEEKDAYS, addDays, frequencyLabel, money, relativeDay, shortDate, slotLabel, toISO } from "../lib/format";
 import { toast, useAuth } from "../store/useStore";
 
@@ -103,7 +111,7 @@ export function Basket() {
   }
 
   const paused = basket.status === "paused";
-  const today = calendar?.[0];
+  const todayLines = calendar?.[0]?.lines.filter((l) => l.quantity > 0) ?? [];
 
   return (
     <>
@@ -175,10 +183,10 @@ export function Basket() {
         </div>
 
         {/* Today */}
-        {today && today.lines.length > 0 && (
+        {todayLines.length > 0 && (
           <div>
             <h2 className="h3 mb-2">Today</h2>
-            {today.lines.map((entry) => (
+            {todayLines.map((entry) => (
               <div key={entry.line} className="row" style={{ ["--accent" as string]: entry.accent }}>
                 <span className="row__art">
                   <span style={{ fontWeight: 700 }}>{entry.quantity}×</span>
@@ -242,6 +250,8 @@ export function Basket() {
           )}
         </div>
 
+        {calendar && <ChangesList days={calendar} onPick={setDayOpen} />}
+
         <button
           className="btn btn--danger btn--block"
           disabled={busy}
@@ -259,7 +269,10 @@ export function Basket() {
         basket={basket}
         day={calendar?.find((d) => d.date === dayOpen) ?? null}
         onClose={() => setDayOpen(null)}
-        onSaved={(days) => setCalendar(days)}
+        onSaved={(days) => {
+          setCalendar(days);
+          void loadBaskets();
+        }}
       />
 
       <LineSheet
@@ -296,8 +309,9 @@ function CalendarGrid({ days, onPick }: { days: CalendarDay[]; onPick: (date: st
           <span key={`pad-${i}`} />
         ))}
         {days.map((day) => {
-          const count = day.lines.reduce((n, l) => n + l.quantity, 0);
-          const edited = day.lines.some((l) => l.overridden);
+          const going = day.lines.filter((l) => l.quantity > 0);
+          const count = going.reduce((n, l) => n + l.quantity, 0);
+          const edited = changedLines(day).length > 0;
           return (
             <button
               key={day.date}
@@ -308,7 +322,7 @@ function CalendarGrid({ days, onPick }: { days: CalendarDay[]; onPick: (date: st
               <span className="calday__n">{Number(day.date.slice(-2))}</span>
               {count > 0 && (
                 <span className="calday__dots">
-                  {day.lines.slice(0, 3).map((l, i) => (
+                  {going.slice(0, 3).map((l, i) => (
                     <i key={i} style={{ background: l.accent }} />
                   ))}
                 </span>
@@ -329,6 +343,64 @@ function CalendarGrid({ days, onPick }: { days: CalendarDay[]; onPick: (date: st
   );
 }
 
+/* ── Changed days ──────────────────────────────────────────────────── */
+
+function describeChange(l: CalendarLine) {
+  if (l.quantity === 0) return `No ${l.name}`;
+  if (l.usual === 0) return `${l.name} ${l.quantity} (extra)`;
+  return `${l.name} ${l.quantity} (usually ${l.usual})`;
+}
+
+function ChangesList({ days, onPick }: { days: CalendarDay[]; onPick: (date: string) => void }) {
+  const changed = days.map((day) => ({ day, lines: changedLines(day) })).filter((d) => d.lines.length > 0);
+
+  return (
+    <div>
+      <div className="sectionhead">
+        <h2 className="h3">Your changes</h2>
+        {changed.length > 0 && (
+          <span className="tiny muted">
+            {changed.length} day{changed.length === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+      {changed.length === 0 ? (
+        <p className="sm muted">Nothing changed. Tap a day in the calendar to change it, and it will be listed here.</p>
+      ) : (
+        <div className="stack flow-sm">
+          {changed.map(({ day, lines }) => {
+            const [y, m, d] = day.date.split("-").map(Number);
+            const date = new Date(y, m - 1, d);
+            const skipped = day.lines.every((l) => l.quantity === 0);
+            return (
+              <button key={day.date} className="row" onClick={() => onPick(day.date)}>
+                <span className="row__art datetile">
+                  <b>{d}</b>
+                  <small>{date.toLocaleDateString("en-IN", { month: "short" })}</small>
+                </span>
+                <span className="row__main">
+                  <span className="row__t">
+                    {relativeDay(day.date)}
+                    {skipped && (
+                      <span className="tag tag--skipped" style={{ marginLeft: 8 }}>
+                        Skipped
+                      </span>
+                    )}
+                  </span>
+                  <span className="row__s">{lines.map(describeChange).join(" · ")}</span>
+                </span>
+                <span className="row__end muted">
+                  <Icon.chev />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Sheet: edit one day ───────────────────────────────────────────── */
 
 function DaySheet({
@@ -342,76 +414,126 @@ function DaySheet({
   onClose: () => void;
   onSaved: (days: CalendarDay[]) => void;
 }) {
-  const [busy, setBusy] = useState<number | null>(null);
+  // Per line: a number sets that date, null drops back to the usual rhythm.
+  const [draft, setDraft] = useState<Record<number, number | null>>({});
+  const [busy, setBusy] = useState(false);
 
-  async function setQuantity(lineId: number, quantity: number | null) {
-    setBusy(lineId);
+  useEffect(() => setDraft({}), [day?.date]);
+
+  const rows = day
+    ? basket.lines
+        .filter((l) => l.is_active)
+        .map((line) => {
+          const entry = day.lines.find((e) => e.line === line.id);
+          const usual = entry?.usual ?? 0;
+          const saved = entry?.overridden ? entry.quantity : null;
+          const current = line.id in draft ? draft[line.id] : saved;
+          return { line, usual, saved, current, shown: current ?? usual };
+        })
+    : [];
+
+  const dirty = Object.keys(draft).length > 0;
+  const estimate =
+    rows.reduce((sum, r) => sum + Number(r.line.unit_price) * r.shown, 0) * (1 - Number(basket.discount_percent) / 100);
+
+  function change(row: (typeof rows)[number], value: number) {
+    const next = value === row.usual ? null : value;
+    setDraft((d) => {
+      const copy = { ...d };
+      if (next === row.saved) delete copy[row.line.id];
+      else copy[row.line.id] = next;
+      return copy;
+    });
+  }
+
+  async function save() {
+    setBusy(true);
+    let days: CalendarDay[] | null = null;
     try {
-      const res = await api.post<{ days: CalendarDay[] }>(`/subscriptions/${basket.id}/set-day/`, {
-        line: lineId,
-        date: day!.date,
-        quantity,
-      });
-      onSaved(res.days);
+      for (const [line, quantity] of Object.entries(draft)) {
+        const res = await api.post<{ days: CalendarDay[] }>(`/subscriptions/${basket.id}/set-day/`, {
+          line: Number(line),
+          date: day!.date,
+          quantity,
+        });
+        days = res.days;
+        setDraft((d) => {
+          const copy = { ...d };
+          delete copy[Number(line)];
+          return copy;
+        });
+      }
+      toast(`${relativeDay(day!.date)} is updated.`);
+      onClose();
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Could not change that day.", "error");
+      toast(e instanceof ApiError ? e.message : "Could not save that day.", "error");
     } finally {
-      setBusy(null);
+      if (days) onSaved(days);
+      setBusy(false);
     }
   }
 
-  const entries = day
-    ? basket.lines
-        .filter((l) => l.is_active)
-        .map((line) => ({
-          line,
-          entry: day.lines.find((e) => e.line === line.id) ?? null,
-        }))
-    : [];
-
   return (
-    <Sheet open={!!day} onClose={onClose} title={day ? relativeDay(day.date) : ""}>
+    <Sheet
+      open={!!day}
+      onClose={onClose}
+      title={day ? relativeDay(day.date) : ""}
+      footer={
+        day && rows.length > 0 ? (
+          <button className="btn btn--primary btn--lg btn--block" onClick={save} disabled={!dirty || busy}>
+            {busy ? <Spinner /> : null} {dirty ? "Save changes" : "No changes yet"}
+          </button>
+        ) : null
+      }
+    >
       {day && (
         <>
           <p className="sm muted" style={{ marginBottom: "var(--sp-4)" }}>
-            {shortDate(day.date)} · {Number(day.total) > 0 ? money(day.total) : "nothing scheduled"}
+            {shortDate(day.date)} ·{" "}
+            {dirty
+              ? estimate > 0
+                ? `${money(estimate)} after saving`
+                : "nothing after saving"
+              : Number(day.total) > 0
+                ? money(day.total)
+                : "nothing scheduled"}
           </p>
 
           <div className="stack flow-sm">
-            {entries.map(({ line, entry }) => (
-              <div key={line.id} className="card card--pad" style={{ padding: "var(--sp-4)" }}>
+            {rows.map((row) => (
+              <div key={row.line.id} className="card card--pad" style={{ padding: "var(--sp-4)" }}>
                 <div className="between">
                   <div style={{ minWidth: 0 }}>
-                    <div className="row__t">{line.product.name}</div>
+                    <div className="row__t">{row.line.product.name}</div>
                     <div className="row__s">
-                      {line.product.variant_label} · {slotLabel(line.slot)}
+                      {row.line.product.variant_label} · {slotLabel(row.line.slot)}
                     </div>
                   </div>
-                  {busy === line.id ? (
-                    <Spinner />
-                  ) : (
-                    <div className="stepper">
-                      <button
-                        onClick={() => setQuantity(line.id, Math.max(0, (entry?.quantity ?? 0) - 1))}
-                        disabled={(entry?.quantity ?? 0) === 0}
-                        aria-label="Less"
-                      >
-                        −
-                      </button>
-                      <span className="num">{entry?.quantity ?? 0}</span>
-                      <button
-                        onClick={() => setQuantity(line.id, (entry?.quantity ?? 0) + 1)}
-                        disabled={(entry?.quantity ?? 0) >= 20}
-                        aria-label="More"
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
+                  <div className="stepper">
+                    <button
+                      onClick={() => change(row, row.shown - 1)}
+                      disabled={busy || row.shown === 0}
+                      aria-label="Less"
+                    >
+                      −
+                    </button>
+                    <span className="num">{row.shown}</span>
+                    <button
+                      onClick={() => change(row, row.shown + 1)}
+                      disabled={busy || row.shown >= 20}
+                      aria-label="More"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                {entry?.overridden && (
-                  <button className="linkish" style={{ marginTop: 10 }} onClick={() => setQuantity(line.id, null)}>
-                    Reset to usual ({line.quantity} × {frequencyLabel(line.frequency, line.weekdays).toLowerCase()})
+                {row.current !== null && (
+                  <button className="linkish" style={{ marginTop: 10 }} disabled={busy} onClick={() => change(row, row.usual)}>
+                    Reset to usual (
+                    {row.usual
+                      ? `${row.usual} × ${frequencyLabel(row.line.frequency, row.line.weekdays).toLowerCase()}`
+                      : "none on this day"}
+                    )
                   </button>
                 )}
               </div>

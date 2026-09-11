@@ -4,7 +4,17 @@ import { AddressForm } from "../components/AddressForm";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Empty, Icon, Sheet, Skeletons, Spinner } from "../components/ui";
-import { ApiError, api, type Address, type Delivery, type Summary, type Wallet } from "../lib/api";
+import {
+  ApiError,
+  api,
+  changedLines,
+  type Address,
+  type CalendarDay,
+  type CalendarLine,
+  type Delivery,
+  type Summary,
+  type Wallet,
+} from "../lib/api";
 import { longDate, money, relativeDay, slotLabel } from "../lib/format";
 import { toast, useAuth } from "../store/useStore";
 
@@ -342,19 +352,43 @@ export function WalletPage() {
 /* ── Deliveries ────────────────────────────────────────────────────── */
 
 export function Deliveries() {
+  const baskets = useAuth((s) => s.baskets);
   const [rows, setRows] = useState<Delivery[] | null>(null);
+  const [days, setDays] = useState<CalendarDay[]>([]);
 
   useEffect(() => {
     void api.get<Delivery[]>("/deliveries/").then(setRows).catch(() => setRows([]));
   }, []);
 
+  const basketIds = baskets
+    .filter((b) => b.status !== "cancelled")
+    .map((b) => b.id)
+    .join(",");
+
+  useEffect(() => {
+    if (!basketIds) return;
+    // 14 matches the delivery roster window on the server.
+    void Promise.all(
+      basketIds.split(",").map((id) => api.get<{ days: CalendarDay[] }>(`/subscriptions/${id}/calendar/?days=14`)),
+    )
+      .then((all) => setDays(all.flatMap((r) => r.days)))
+      .catch(() => setDays([]));
+  }, [basketIds]);
+
+  const changes = new Map<string, CalendarLine>();
+  for (const day of days) for (const l of changedLines(day)) changes.set(`${l.line}|${day.date}`, l);
+  const kinds = new Map(baskets.flatMap((b) => b.lines.map((l) => [l.id, l.product.kind] as const)));
+
   const grouped = (() => {
     if (!rows) return [];
-    const map = new Map<string, Delivery[]>();
-    for (const row of [...rows].sort((a, b) => a.date.localeCompare(b.date))) {
-      map.set(row.date, [...(map.get(row.date) ?? []), row]);
-    }
-    return [...map.entries()];
+    const map = new Map<string, { items: Delivery[]; skipped: CalendarLine[] }>();
+    const at = (date: string) => {
+      if (!map.has(date)) map.set(date, { items: [], skipped: [] });
+      return map.get(date)!;
+    };
+    for (const row of rows) at(row.date).items.push(row);
+    for (const day of days) for (const l of changedLines(day)) if (l.quantity === 0) at(day.date).skipped.push(l);
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   })();
 
   return (
@@ -363,7 +397,7 @@ export function Deliveries() {
       <div className="shell">
         {rows === null ? (
           <Skeletons count={5} height={70} />
-        ) : rows.length === 0 ? (
+        ) : grouped.length === 0 ? (
           <Empty
             title="No deliveries yet"
             body="Once your basket is running, the next fortnight shows up here."
@@ -375,29 +409,59 @@ export function Deliveries() {
           />
         ) : (
           <div className="stack" style={{ paddingBottom: "var(--sp-8)" }}>
-            {grouped.map(([date, items]) => (
+            {grouped.map(([date, { items, skipped }]) => (
               <div key={date}>
                 <div className="between mb-2">
                   <h3 className="h3">{relativeDay(date)}</h3>
                   <span className="tiny muted">{longDate(date)}</span>
                 </div>
                 <div className="stack flow-sm">
-                  {items.map((row) => (
-                    <div key={row.id} className="row" style={{ ["--accent" as string]: row.product.accent }}>
+                  {items.map((row) => {
+                    const change = changes.get(`${row.line}|${row.date}`);
+                    return (
+                      <div key={row.id} className="row" style={{ ["--accent" as string]: row.product.accent }}>
+                        <span className="row__art">
+                          <ProductArt kind={row.product.kind} accent={row.product.accent} size="70%" />
+                        </span>
+                        <span className="row__main">
+                          <span className="row__t">
+                            {row.product.name} · {row.quantity} × {row.product.variant_label}
+                          </span>
+                          <span className="row__s">
+                            {slotLabel(row.slot)} round
+                            {change && (
+                              <>
+                                {" · "}
+                                <span className="tag tag--changed">Changed</span>{" "}
+                                {change.usual ? `usually ${change.usual}` : "extra"}
+                              </>
+                            )}
+                          </span>
+                        </span>
+                        <span className="row__end">
+                          <span className={`tag tag--${row.status}`}>{row.status_display}</span>
+                          <span className="row__s num" style={{ marginTop: 3 }}>
+                            {money(row.total, true)}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {skipped.map((l) => (
+                    <div key={`skip-${l.line}`} className="row row--skipped" style={{ ["--accent" as string]: l.accent }}>
                       <span className="row__art">
-                        <ProductArt kind={row.product.kind} accent={row.product.accent} size="70%" />
+                        <ProductArt kind={kinds.get(l.line) ?? "milk"} accent={l.accent} size="70%" />
                       </span>
                       <span className="row__main">
                         <span className="row__t">
-                          {row.product.name} · {row.quantity} × {row.product.variant_label}
+                          {l.name} · {l.variant_label}
                         </span>
-                        <span className="row__s">{slotLabel(row.slot)} round</span>
+                        <span className="row__s">
+                          {slotLabel(l.slot)} round · usually {l.usual}
+                        </span>
                       </span>
                       <span className="row__end">
-                        <span className={`tag tag--${row.status}`}>{row.status_display}</span>
-                        <span className="row__s num" style={{ marginTop: 3 }}>
-                          {money(row.total, true)}
-                        </span>
+                        <span className="tag tag--skipped">Skipped</span>
                       </span>
                     </div>
                   ))}

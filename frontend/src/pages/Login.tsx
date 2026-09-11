@@ -99,7 +99,7 @@ export function Login() {
     setDigits(filled);
     if (clean && index < 5) boxes.current[index + 1]?.focus();
     const joined = filled.join("");
-    if (joined.length === 6 && !joined.includes("")) void verify(joined);
+    if (joined.length === 6) void verify(joined);
   }
 
   return (

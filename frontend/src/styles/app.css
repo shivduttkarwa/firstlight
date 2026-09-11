@@ -921,6 +921,16 @@
   flex: none;
   text-align: right;
 }
+.row--skipped {
+  background: transparent;
+}
+.row--skipped .row__art,
+.row--skipped .row__t {
+  opacity: 0.55;
+}
+.row--skipped .row__t {
+  text-decoration: line-through;
+}
 
 /* ── Chips, tags ───────────────────────────────────────────────────── */
 
@@ -971,7 +981,8 @@
   color: var(--ok);
 }
 .tag--paused,
-.tag--part {
+.tag--part,
+.tag--changed {
   background: var(--accent-soft);
   color: var(--accent-ink);
 }
@@ -1503,6 +1514,28 @@
 .callegend__edit {
   background: transparent;
   box-shadow: inset 0 0 0 2px var(--ink);
+}
+.datetile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  font-family: var(--font-num);
+  line-height: 1;
+}
+.datetile b {
+  font-size: 1rem;
+  color: var(--ink);
+}
+.datetile small {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* ── OTP boxes ─────────────────────────────────────────────────────── */

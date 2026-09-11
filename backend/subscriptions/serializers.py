@@ -163,16 +163,18 @@ def basket_calendar(subscription, days=30, from_date=None):
         entries = []
         for line in lines:
             quantity = line.quantity_on(day, overrides)
-            if quantity:
+            overridden = day in overrides.get(line.id, {})
+            if quantity or overridden:
                 entries.append(
                     {
                         "line": line.id,
                         "quantity": quantity,
+                        "usual": line.quantity_on(day, {}),
                         "slot": line.slot,
                         "name": line.variant.product.name,
                         "variant_label": line.variant.label,
                         "accent": line.variant.product.accent,
-                        "overridden": day in overrides.get(line.id, {}),
+                        "overridden": overridden,
                     }
                 )
         out.append(

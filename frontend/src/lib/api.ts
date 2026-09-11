@@ -209,12 +209,19 @@ export interface CalendarDay {
   lines: {
     line: number;
     quantity: number;
+    usual: number;
     slot: Slot;
     name: string;
     variant_label: string;
     accent: string;
     overridden: boolean;
   }[];
+}
+
+export type CalendarLine = CalendarDay["lines"][number];
+
+export function changedLines(day: CalendarDay) {
+  return day.lines.filter((l) => l.overridden && l.quantity !== l.usual);
 }
 
 export interface Address {
