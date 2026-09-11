@@ -150,6 +150,12 @@ export const Icon = {
       <path d="M20 5v6h-6" />
     </svg>
   ),
+  copy: () => (
+    <svg viewBox="0 0 24 24" {...S}>
+      <rect x="9" y="9" width="11" height="12" rx="1.5" />
+      <path d="M15 6.5V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.5" />
+    </svg>
+  ),
 };
 
 /* ── Motion helpers ────────────────────────────────────────────────── */
@@ -185,8 +191,10 @@ export function PageFade({ children }: { children: ReactNode }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0 }}
+      // Exit is deliberately much shorter than enter: with mode="wait" the two
+      // run back to back, and a slow exit is dead time on a tab switch.
+      transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1], exit: { duration: 0.1 } }}
     >
       {children}
     </motion.div>

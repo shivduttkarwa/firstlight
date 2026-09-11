@@ -1,0 +1,58 @@
+<div class="fl-dash">
+  <div class="fl-hero">
+    <span class="fl-hero__eyebrow">Today &middot; {{ today|date:"j F" }}</span>
+    <h2>The round</h2>
+    <div class="fl-hero__meta">
+      {{ morning.done }} of {{ morning.items }} out on the morning,
+      {{ evening.done }} of {{ evening.items }} on the evening &mdash;
+      ₹{{ total_value|floatformat:2 }} on the road.
+    </div>
+    <div class="fl-bar"><span style="width:{{ morning.percent }}%"></span></div>
+    <a href="{% url 'wagtailsnippets_orders_delivery:list' %}"
+       style="display:inline-block;margin-top:1rem;background:#C6F24B;color:#071310;font-weight:600;font-size:.82rem;padding:.5rem .9rem;border-radius:7px;text-decoration:none">Open the roster</a>
+  </div>
+
+  <div class="fl-dash fl-dash--split">
+    <div class="fl-card">
+      <div class="fl-card__head">
+        <h3>Morning</h3>
+        <span class="fl-tag {% if morning.percent == 100 %}fl-tag--ok{% endif %}">{{ morning.percent }}% done</span>
+      </div>
+      <div class="fl-card__body">
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Stops</span></span>
+          <span class="fl-row__end">{{ morning.stops }}</span>
+        </div>
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Items</span></span>
+          <span class="fl-row__end">{{ morning.items }}</span>
+        </div>
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Value</span></span>
+          <span class="fl-row__end">₹{{ morning.value|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fl-card">
+      <div class="fl-card__head">
+        <h3>Evening</h3>
+        <span class="fl-tag {% if evening.percent == 100 %}fl-tag--ok{% endif %}">{{ evening.percent }}% done</span>
+      </div>
+      <div class="fl-card__body">
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Stops</span></span>
+          <span class="fl-row__end">{{ evening.stops }}</span>
+        </div>
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Items</span></span>
+          <span class="fl-row__end">{{ evening.items }}</span>
+        </div>
+        <div class="fl-row">
+          <span class="fl-row__main"><span class="fl-row__t">Value</span></span>
+          <span class="fl-row__end">₹{{ evening.value|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

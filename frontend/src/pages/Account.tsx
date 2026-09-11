@@ -23,10 +23,51 @@ function RequireUser({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** The "You" tab before you have signed in. */
+function SignedOut() {
+  return (
+    <>
+      <AppBar title="You" />
+      <div className="shell">
+        <span className="eyebrow">Your account</span>
+        <h1 className="display mt-1">Sign in to see your round.</h1>
+        <p className="lede mt-2">
+          Your basket, your deliveries and your wallet all live here. A phone number and a one-time code is all it
+          takes — no password to remember.
+        </p>
+
+        <div className="stack flow-sm mt-3">
+          {[
+            ["Your basket", "What goes out, and on which days", <Icon.basket key="b" />],
+            ["Deliveries", "Every drop, morning and evening", <Icon.calendar key="c" />],
+            ["Wallet", "Top up once, we draw from it daily", <Icon.wallet key="w" />],
+          ].map(([title, sub, icon]) => (
+            <div className="row" key={title as string}>
+              <span className="row__art">{icon as React.ReactNode}</span>
+              <span className="row__main">
+                <span className="row__t">{title as string}</span>
+                <span className="row__s">{sub as string}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <Link to="/login?next=/account" className="btn btn--primary btn--lg btn--block mt-3">
+          Sign in <Icon.arrow />
+        </Link>
+        <p className="hint center mt-2" style={{ paddingBottom: "var(--sp-8)" }}>
+          New here? The same code signs you up.
+        </p>
+      </div>
+    </>
+  );
+}
+
 /* ── Overview ──────────────────────────────────────────────────────── */
 
 export function Account() {
   const user = useAuth((s) => s.user);
+  const ready = useAuth((s) => s.ready);
   const signOut = useAuth((s) => s.signOut);
   const baskets = useAuth((s) => s.baskets);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -35,6 +76,10 @@ export function Account() {
   useEffect(() => {
     if (user) void api.get<Summary>("/deliveries/summary/").then(setSummary).catch(() => undefined);
   }, [user]);
+
+  // This one is a tab, so it never bounces to the sign-in flow — bouncing takes
+  // the tab bar with it and strands you on a screen with only a back arrow.
+  if (ready && !user) return <SignedOut />;
 
   return (
     <RequireUser>

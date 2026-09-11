@@ -1,0 +1,22 @@
+<div class="fl-tiles" style="margin-bottom:1rem">
+  <div class="fl-tile">
+    <div class="fl-tile__k">Customers</div>
+    <div class="fl-tile__v">{{ customers }}</div>
+  </div>
+  <div class="fl-tile">
+    <div class="fl-tile__k">Active baskets</div>
+    <div class="fl-tile__v">{{ baskets }}</div>
+  </div>
+  <div class="fl-tile">
+    <div class="fl-tile__k">Delivered this month</div>
+    <div class="fl-tile__v">{{ delivered }}</div>
+  </div>
+  <div class="fl-tile">
+    <div class="fl-tile__k">Taken this month</div>
+    <div class="fl-tile__v">₹{{ taken|floatformat:2 }}</div>
+  </div>
+  <div class="fl-tile {% if low %}fl-tile--bad{% endif %}">
+    <div class="fl-tile__k">Wallets low</div>
+    <div class="fl-tile__v">{{ low }}</div>
+  </div>
+</div>

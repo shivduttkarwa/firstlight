@@ -1,6 +1,7 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState, type CSSProperties } from "react";
+import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import { Offers } from "../components/Offers";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Icon, Reveal, Skeletons } from "../components/ui";
@@ -14,7 +15,7 @@ import {
   type Summary,
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { HERO_SLIDES, fullBleed, photo } from "../lib/photos";
+import { HERO_SLIDES, STEP_PHOTOS, fullBleed, photo } from "../lib/photos";
 import { useAuth } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
@@ -97,6 +98,8 @@ export function Home() {
         <Hero content={content} />
       )}
 
+      <Offers />
+
       {packages.length > 0 && (
         <section className="sect" style={{ paddingBottom: 0 }}>
           <div className="shell sectionhead">
@@ -177,38 +180,7 @@ export function Home() {
         </section>
       )}
 
-      {process.length > 0 && (
-        <section className="sect" style={{ paddingTop: 0 }}>
-          <div className="shell">
-            <h2 className="h3 mb-2">A morning at the farm</h2>
-            <div className="stack flow-sm">
-              {process.map((step, i) => (
-                <Reveal key={step.title} delay={i * 0.05}>
-                  <div className="row" style={{ alignItems: "flex-start" }}>
-                    <span
-                      className="row__art"
-                      style={{
-                        background: "var(--accent-soft)",
-                        fontFamily: "var(--font-display)",
-                        fontSize: "0.85rem",
-                        color: "var(--brand-deep)",
-                      }}
-                    >
-                      {step.time.replace(/\s?[ap]m/i, "")}
-                    </span>
-                    <span className="row__main">
-                      <span className="row__t">{step.title}</span>
-                      <span className="row__s" style={{ whiteSpace: "normal" }}>
-                        {step.body}
-                      </span>
-                    </span>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {process.length > 0 && <Morning steps={process} />}
 
       <section className="sect" style={{ paddingTop: 0 }}>
         <div className="shell">
@@ -330,6 +302,72 @@ function Ticker() {
         ))}
       </div>
     </div>
+  );
+}
+
+/** The round, as a timeline: a lime line that fills with the scroll, and a
+    photograph per step that clips open as it comes into view. */
+function Morning({ steps }: { steps: { time: string; title: string; body: string }[] }) {
+  const still = useReducedMotion();
+  const track = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: track,
+    offset: ["start 0.85", "end 0.65"],
+  });
+  const fill = useSpring(scrollYProgress, { stiffness: 90, damping: 24, restDelta: 0.001 });
+
+  return (
+    <section className="sect steps-sect">
+      <div className="shell">
+        <span className="eyebrow">Half past four to six</span>
+        <h2 className="h2 mt-1 mb-2">A morning at the farm</h2>
+
+        <div className="steps" ref={track}>
+          <div className="steps__rail" aria-hidden="true">
+            <motion.div className="steps__fill" style={{ scaleY: still ? 1 : fill }} />
+          </div>
+
+          {steps.map((step, i) => (
+            <article className="step" key={step.title}>
+              <div className="step__mark">
+                <motion.span
+                  className="step__dot"
+                  initial={still ? false : { scale: 0.4, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true, margin: "-25% 0px -25% 0px" }}
+                  transition={{ type: "spring", stiffness: 320, damping: 20 }}
+                />
+                <span className="step__time num">{step.time.replace(/\s?[ap]m/i, "")}</span>
+              </div>
+
+              <div className="step__panel">
+                <motion.figure
+                  className="step__media"
+                  initial={still ? false : { clipPath: "inset(0 0 100% 0)" }}
+                  whileInView={{ clipPath: "inset(0 0 0% 0)" }}
+                  viewport={{ once: true, margin: "-15% 0px" }}
+                  transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+                >
+                  <img {...photo(STEP_PHOTOS[i % STEP_PHOTOS.length], 720, 540)} />
+                  <span className="step__n num">{String(i + 1).padStart(2, "0")}</span>
+                </motion.figure>
+
+                <motion.div
+                  className="step__copy"
+                  initial={still ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-15% 0px" }}
+                  transition={{ duration: 0.6, delay: 0.12, ease: [0.2, 0.8, 0.2, 1] }}
+                >
+                  <h3 className="h3">{step.title}</h3>
+                  <p className="muted sm mt-1">{step.body}</p>
+                </motion.div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

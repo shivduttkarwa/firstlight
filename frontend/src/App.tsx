@@ -1,6 +1,6 @@
 import { AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
 import { CUSTOMER_TABS, FARM_TABS, FarmNav, TabBar } from "./components/Shell";
 import { PageFade, Skeletons, Toaster } from "./components/ui";
 import { Account, Addresses, Deliveries, WalletPage } from "./pages/Account";
@@ -39,11 +39,23 @@ function NotFound() {
   );
 }
 
+/** The page transition, wrapped around the outlet rather than around the whole
+    route tree — anything outside it survives a navigation. */
+function FadingOutlet() {
+  const location = useLocation();
+  const outlet = useOutlet();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <PageFade key={location.pathname}>{outlet}</PageFade>
+    </AnimatePresence>
+  );
+}
+
 /** Customer app: bottom tabs, storefront routes. */
 function CustomerShell() {
   return (
     <>
-      <Outlet />
+      <FadingOutlet />
       <TabBar tabs={CUSTOMER_TABS} />
     </>
   );
@@ -66,7 +78,7 @@ function FarmShell() {
   return (
     <>
       <FarmNav />
-      <Outlet />
+      <FadingOutlet />
       <TabBar tabs={FARM_TABS} />
     </>
   );
@@ -88,41 +100,37 @@ export default function App() {
       <div className="mesh" aria-hidden="true" />
 
       <main id="main" className="appmain">
-        <AnimatePresence mode="wait">
-          <PageFade key={location.pathname}>
-            <Routes location={location}>
-              {/* Farm desk */}
-              <Route path="/farm/login" element={<FarmLogin />} />
-              <Route path="/farm" element={<FarmShell />}>
-                <Route index element={<FarmRound />} />
-                <Route path="customers" element={<FarmCustomers />} />
-                <Route path="customers/:id" element={<FarmCustomerDetail />} />
-                <Route path="products" element={<FarmProducts />} />
-                <Route path="more" element={<FarmMore />} />
-                <Route path="website" element={<FarmWebsite />} />
-              </Route>
+        <Routes location={location}>
+          {/* Farm desk */}
+          <Route path="/farm/login" element={<FarmLogin />} />
+          <Route path="/farm" element={<FarmShell />}>
+            <Route index element={<FarmRound />} />
+            <Route path="customers" element={<FarmCustomers />} />
+            <Route path="customers/:id" element={<FarmCustomerDetail />} />
+            <Route path="products" element={<FarmProducts />} />
+            <Route path="more" element={<FarmMore />} />
+            <Route path="website" element={<FarmWebsite />} />
+          </Route>
 
-              {/* Storefront */}
-              <Route element={<CustomerShell />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/product/:slug" element={<ProductDetail />} />
-                <Route path="/packages" element={<Packages />} />
-                <Route path="/packages/:slug" element={<PackageDetail />} />
-                <Route path="/basket" element={<Basket />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/account/wallet" element={<WalletPage />} />
-                <Route path="/account/deliveries" element={<Deliveries />} />
-                <Route path="/account/addresses" element={<Addresses />} />
-                <Route path="/how-it-works" element={<HowItWorks />} />
-                <Route path="/the-farm" element={<TheFarm />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
+          {/* Storefront */}
+          <Route element={<CustomerShell />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:slug" element={<ProductDetail />} />
+            <Route path="/packages" element={<Packages />} />
+            <Route path="/packages/:slug" element={<PackageDetail />} />
+            <Route path="/basket" element={<Basket />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/account/wallet" element={<WalletPage />} />
+            <Route path="/account/deliveries" element={<Deliveries />} />
+            <Route path="/account/addresses" element={<Addresses />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/the-farm" element={<TheFarm />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
 
-              <Route path="/login" element={<Login />} />
-            </Routes>
-          </PageFade>
-        </AnimatePresence>
+          <Route path="/login" element={<Login />} />
+        </Routes>
       </main>
 
       <ScrollToTop />

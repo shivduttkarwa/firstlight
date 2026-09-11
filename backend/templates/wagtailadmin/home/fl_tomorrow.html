@@ -1,0 +1,20 @@
+<div class="fl-card" style="margin-bottom:1rem">
+  <div class="fl-card__head">
+    <h3>To fill tomorrow &middot; {{ tomorrow|date:"j F" }}</h3>
+    <a href="{% url 'wagtailsnippets_orders_delivery:list' %}">Open the roster</a>
+  </div>
+  <div class="fl-card__body">
+    {% for row in rows %}
+      <div class="fl-row">
+        <span class="fl-qty">{{ row.packs }}</span>
+        <span class="fl-row__main">
+          <span class="fl-row__t">{{ row.variant__product__name }}</span>
+          <span class="fl-row__s">{{ row.variant__label }}</span>
+        </span>
+        <span class="fl-tag">{{ row.slot }}</span>
+      </div>
+    {% empty %}
+      <p class="fl-empty">Nothing on the roster for tomorrow yet. Run <code>build_roster</code> to extend it.</p>
+    {% endfor %}
+  </div>
+</div>

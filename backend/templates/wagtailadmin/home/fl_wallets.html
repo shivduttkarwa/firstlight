@@ -1,0 +1,19 @@
+<div class="fl-card" style="margin-bottom:1rem">
+  <div class="fl-card__head">
+    <h3>Wallets running low</h3>
+    <span class="fl-tag">under ₹{{ threshold|floatformat:0 }}</span>
+  </div>
+  <div class="fl-card__body">
+    {% for wallet in wallets %}
+      <div class="fl-row">
+        <span class="fl-row__main">
+          <span class="fl-row__t">{{ wallet.user.full_name|default:wallet.user.phone }}</span>
+          <span class="fl-row__s">{{ wallet.user.phone }}</span>
+        </span>
+        <span class="fl-row__end" style="color:var(--fl-bad)">₹{{ wallet.balance|floatformat:2 }}</span>
+      </div>
+    {% empty %}
+      <p class="fl-empty">Every active subscriber has enough to cover the next few days.</p>
+    {% endfor %}
+  </div>
+</div>

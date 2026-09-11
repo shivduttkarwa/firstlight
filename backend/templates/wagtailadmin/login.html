@@ -1,0 +1,16 @@
+{% extends "wagtailadmin/login.html" %}
+
+{# Wagtail renders branding_logo underneath the submit button, so the mark goes
+   in the title block instead and the logo block is left empty. #}
+{% block branding_logo %}{% endblock %}
+
+{% block branding_login %}
+  <svg viewBox="0 0 32 32" width="60" height="60" style="margin:0 auto .6rem;display:block" aria-hidden="true">
+    <rect width="32" height="32" rx="7" fill="#C6F24B"/>
+    <path d="M6 21h20" stroke="#071310" stroke-width="2.4"/>
+    <path d="M10 21a6 6 0 0 1 12 0" fill="#071310"/>
+    <path d="M6 26h20" stroke="#071310" stroke-width="2.4" stroke-opacity=".45"/>
+  </svg>
+  Firstlight
+  <span style="display:block;font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#638175;margin-top:.4rem">Farm office</span>
+{% endblock %}

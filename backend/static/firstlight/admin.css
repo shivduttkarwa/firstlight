@@ -1,0 +1,353 @@
+/* =====================================================================
+   Firstlight — Wagtail admin, wearing the storefront's design system.
+   Wagtail 8 builds every colour from an hue/saturation/lightness triplet,
+   so retheming means replacing those rather than chasing hex values.
+   ===================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+:root,
+.w-theme-system,
+.w-theme-light {
+  /* Pine carries the chrome. */
+  --w-color-primary-hue: 159.4;
+  --w-color-primary-saturation: 76.9%;
+  --w-color-primary-lightness: 12%;
+
+  --w-color-primary-200-hue: 159.4;
+  --w-color-primary-200-saturation: 76.9%;
+  --w-color-primary-200-lightness: 23.7%;
+
+  --w-color-secondary-hue: 159.4;
+  --w-color-secondary-saturation: 76.9%;
+  --w-color-secondary-lightness: 23.7%;
+  --w-color-secondary-600-hue: 159.4;
+  --w-color-secondary-600-saturation: 76.9%;
+  --w-color-secondary-600-lightness: 17%;
+  --w-color-secondary-400-hue: 158.8;
+  --w-color-secondary-400-saturation: 73.9%;
+  --w-color-secondary-400-lightness: 30%;
+  --w-color-secondary-100-hue: 159;
+  --w-color-secondary-100-saturation: 40%;
+  --w-color-secondary-100-lightness: 88%;
+  --w-color-secondary-75-hue: 159;
+  --w-color-secondary-75-saturation: 40%;
+  --w-color-secondary-75-lightness: 92%;
+  --w-color-secondary-50-hue: 159;
+  --w-color-secondary-50-saturation: 40%;
+  --w-color-secondary-50-lightness: 96%;
+
+  /* Status colours, matched to the storefront. */
+  --w-color-positive-100-hue: 159.7;
+  --w-color-positive-100-saturation: 83.8%;
+  --w-color-positive-100-lightness: 33.9%;
+  --w-color-critical-200-hue: 6.4;
+  --w-color-critical-200-saturation: 68.4%;
+  --w-color-critical-200-lightness: 51.6%;
+  --w-color-warning-100-hue: 75.8;
+  --w-color-warning-100-saturation: 70%;
+  --w-color-warning-100-lightness: 42%;
+
+  /* Cold neutrals rather than warm greys. */
+  --w-color-grey-50-hue: 135;
+  --w-color-grey-50-saturation: 16.7%;
+  --w-color-grey-50-lightness: 96.5%;
+  --w-color-grey-100-hue: 150;
+  --w-color-grey-100-saturation: 12%;
+  --w-color-grey-100-lightness: 91%;
+  --w-color-grey-150-hue: 150;
+  --w-color-grey-150-saturation: 10%;
+  --w-color-grey-150-lightness: 86%;
+  --w-color-grey-200-hue: 152;
+  --w-color-grey-200-saturation: 9%;
+  --w-color-grey-200-lightness: 74%;
+  --w-color-grey-400-hue: 156;
+  --w-color-grey-400-saturation: 13.2%;
+  --w-color-grey-400-lightness: 44.7%;
+  --w-color-grey-600-hue: 162;
+  --w-color-grey-600-saturation: 30%;
+  --w-color-grey-600-lightness: 14%;
+  --w-color-grey-800-hue: 165;
+  --w-color-grey-800-saturation: 46.2%;
+  --w-color-grey-800-lightness: 5.1%;
+
+  --w-color-surface-page: #f1f5f2;
+  --w-color-surface-menus: #071310;
+  --w-color-surface-header: #ffffff;
+  --w-color-surface-dashboard-panel: #ffffff;
+  --w-color-surface-field: #ffffff;
+  --w-color-border-furniture: rgba(7, 19, 16, 0.13);
+  --w-color-focus: #c6f24b;
+
+  /* Firstlight's own, used by the dashboard below. */
+  --fl-lime: #c6f24b;
+  --fl-lime-soft: #eafbc0;
+  --fl-ink: #071310;
+  --fl-ink-2: #2c4a40;
+  --fl-ink-3: #638175;
+  --fl-line: rgba(7, 19, 16, 0.13);
+  --fl-pine: #0e6b4b;
+  --fl-bad: #d8412f;
+  --fl-mono: "JetBrains Mono", ui-monospace, monospace;
+  --fl-display: "Bricolage Grotesque", "Inter", sans-serif;
+}
+
+body,
+.w-body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.006em;
+}
+
+h1,
+h2,
+h3,
+.w-header__title,
+.title-wrapper {
+  font-family: var(--fl-display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+/* Square the corners off, the way the storefront does. */
+.button,
+.w-panel__wrapper,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea,
+.chooser__title,
+.w-dialog__box,
+.w-tabs__tab,
+.listing tbody,
+.nice-padding > .w-panel {
+  border-radius: 7px !important;
+}
+
+/* The sidebar: near-black pine with a lime marker on the active item. */
+.sidebar,
+.sidebar-custom-branding,
+.w-sidebar {
+  background: var(--fl-ink);
+}
+.sidebar .menuitem a:hover,
+.sidebar-menu-item--active > a {
+  background: rgba(198, 242, 75, 0.1);
+}
+.sidebar-menu-item--active > a {
+  box-shadow: inset 3px 0 0 var(--fl-lime);
+  color: #fff;
+}
+
+/* Numbers read in the monospace, here as well. */
+.listing td.numeric,
+.w-status,
+time,
+.fl-num {
+  font-family: var(--fl-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The dashboard ─────────────────────────────────────────────────── */
+
+.fl-dash {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+@media (min-width: 900px) {
+  .fl-dash--split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.fl-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.fl-tile {
+  background: #fff;
+  border: 1px solid var(--fl-line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
+}
+a.fl-tile:hover {
+  border-color: var(--fl-ink-3);
+  transform: translateY(-1px);
+}
+.fl-tile__k {
+  font-family: var(--fl-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fl-ink-3);
+}
+.fl-tile__v {
+  font-family: var(--fl-mono);
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-top: 0.35rem;
+  color: var(--fl-ink);
+}
+.fl-tile__s {
+  font-size: 0.78rem;
+  color: var(--fl-ink-3);
+  margin-top: 0.15rem;
+}
+.fl-tile--bad .fl-tile__v {
+  color: var(--fl-bad);
+}
+
+.fl-card {
+  background: #fff;
+  border: 1px solid var(--fl-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.fl-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--fl-line);
+}
+.fl-card__head h3 {
+  font-family: var(--fl-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+.fl-card__head a {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fl-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--fl-lime);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.fl-card__body {
+  padding: 0.35rem 1.1rem 0.9rem;
+}
+.fl-empty {
+  padding: 1.4rem 0;
+  color: var(--fl-ink-3);
+  font-size: 0.85rem;
+}
+
+.fl-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(7, 19, 16, 0.06);
+}
+.fl-row:last-child {
+  border-bottom: 0;
+}
+.fl-row__main {
+  flex: 1;
+  min-width: 0;
+}
+.fl-row__t {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.fl-row__s {
+  font-size: 0.78rem;
+  color: var(--fl-ink-3);
+}
+.fl-row__end {
+  font-family: var(--fl-mono);
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.fl-qty {
+  min-width: 30px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--fl-lime-soft);
+  color: #3c4f0c;
+  font-family: var(--fl-mono);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.fl-bar {
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(7, 19, 16, 0.08);
+  overflow: hidden;
+  margin-top: 0.6rem;
+}
+.fl-bar span {
+  display: block;
+  height: 100%;
+  background: var(--fl-lime);
+}
+
+.fl-tag {
+  font-family: var(--fl-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(7, 19, 16, 0.06);
+  color: var(--fl-ink-3);
+}
+.fl-tag--ok {
+  background: #d3f4e6;
+  color: #0e9f6e;
+}
+.fl-tag--bad {
+  background: #fbe0dc;
+  color: var(--fl-bad);
+}
+
+.fl-hero {
+  background: var(--fl-ink);
+  color: #eaf3ee;
+  border-radius: 10px;
+  padding: 1.4rem 1.4rem 1.5rem;
+}
+.fl-hero h2 {
+  font-family: var(--fl-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  margin: 0.3rem 0 0;
+  color: #fff;
+}
+.fl-hero__eyebrow {
+  font-family: var(--fl-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fl-lime);
+}
+.fl-hero__meta {
+  font-size: 0.85rem;
+  color: #8fb3a6;
+  margin-top: 0.4rem;
+}
+.fl-hero .fl-bar {
+  background: rgba(255, 255, 255, 0.14);
+}
