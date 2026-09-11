@@ -46,10 +46,12 @@ export function ProductDetail() {
     return (
       <>
         <AppBar back />
-        <div className="shell">
-          <div className="skel" style={{ aspectRatio: "1", borderRadius: "var(--r-2xl)" }} />
-          <div className="mt-3">
-            <Skeletons count={2} height={30} />
+        <div className="shell pdp">
+          <div className="skel pdp__media" />
+          <div className="pdp__info">
+            <div className="mt-3">
+              <Skeletons count={2} height={30} />
+            </div>
           </div>
         </div>
       </>
@@ -60,75 +62,72 @@ export function ProductDetail() {
     <>
       <AppBar back />
 
-      <div className="shell">
+      <div className="shell pdp">
         <motion.div
+          className="pdp__media"
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            aspectRatio: "1",
-            borderRadius: "var(--r-2xl)",
-            display: "grid",
-            placeItems: "center",
             background: `linear-gradient(165deg, color-mix(in srgb, ${product.accent} 34%, var(--surface)), var(--surface) 78%)`,
-            boxShadow: "var(--sh-3)",
-            overflow: "hidden",
           }}
         >
           {product.image_wide ? (
-            <img src={product.image_wide} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={product.image_wide} alt={product.name} />
           ) : (
             <ProductArt kind={product.kind} accent={product.accent} size="52%" />
           )}
         </motion.div>
 
-        <div className="mt-3">
-          <span className="eyebrow">{product.category.name}</span>
-          <h1 className="display mt-1">{product.name}</h1>
-          <p className="lede mt-1">{product.tagline}</p>
-        </div>
+        <div className="pdp__info">
+          <div className="mt-3">
+            <span className="eyebrow">{product.category.name}</span>
+            <h1 className="display mt-1">{product.name}</h1>
+            <p className="lede mt-1">{product.tagline}</p>
+          </div>
 
-        <div className="chips mt-2">
-          {product.slots.map((s) => (
-            <span key={s} className="chip">
-              {s === "morning" ? <Icon.sun /> : <Icon.moon />}
-              {slotLabel(s)} · {slotTime(s)}
-            </span>
-          ))}
-          {product.fat_percent && <span className="chip">{product.fat_percent}% fat</span>}
-          <span className="chip">Keeps {product.shelf_life.toLowerCase()}</span>
-        </div>
+          <div className="chips mt-2">
+            {product.slots.map((s) => (
+              <span key={s} className="chip">
+                {s === "morning" ? <Icon.sun /> : <Icon.moon />}
+                {slotLabel(s)} · {slotTime(s)}
+              </span>
+            ))}
+            {product.fat_percent && <span className="chip">{product.fat_percent}% fat</span>}
+            <span className="chip">Keeps {product.shelf_life.toLowerCase()}</span>
+          </div>
 
-        <div className="mt-3">
-          <span className="label">Pack size</span>
-          <div className="opts opts--row">
-            {product.variants.map((v) => (
-              <button key={v.id} className={`opt${v.id === variant.id ? " opt--on" : ""}`} onClick={() => setVariant(v)}>
-                <span className="opt__t" style={{ paddingRight: 0 }}>
-                  {v.label}
-                </span>
-                <span className="opt__s num">{money(v.price)}</span>
-              </button>
+          <div className="mt-3">
+            <span className="label">Pack size</span>
+            <div className="opts opts--row">
+              {product.variants.map((v) => (
+                <button key={v.id} className={`opt${v.id === variant.id ? " opt--on" : ""}`} onClick={() => setVariant(v)}>
+                  <span className="opt__t" style={{ paddingRight: 0 }}>
+                    {v.label}
+                  </span>
+                  <span className="opt__s num">{money(v.price)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="card card--pad mt-3">
+            {richTextToParagraphs(product.description).map((p, i) => (
+              <p key={i} className="sm" style={{ color: "var(--ink-2)", marginTop: i ? "0.7rem" : 0 }}>
+                {p}
+              </p>
             ))}
           </div>
-        </div>
 
-        <div className="card card--pad mt-3">
-          {richTextToParagraphs(product.description).map((p, i) => (
-            <p key={i} className="sm" style={{ color: "var(--ink-2)", marginTop: i ? "0.7rem" : 0 }}>
-              {p}
-            </p>
-          ))}
-        </div>
-
-        <div className="mt-3" style={{ paddingBottom: "var(--sp-6)" }}>
-          {product.is_subscribable ? (
-            <button className="btn btn--primary btn--lg btn--block" onClick={() => setAdding(true)}>
-              Add to my basket · {money(variant.price)}
-            </button>
-          ) : (
-            <p className="muted center">Available as a one-off order only.</p>
-          )}
+          <div className="mt-3" style={{ paddingBottom: "var(--sp-6)" }}>
+            {product.is_subscribable ? (
+              <button className="btn btn--primary btn--lg btn--block" onClick={() => setAdding(true)}>
+                Add to my basket · {money(variant.price)}
+              </button>
+            ) : (
+              <p className="muted center">Available as a one-off order only.</p>
+            )}
+          </div>
         </div>
       </div>
 

@@ -46,7 +46,7 @@ export function HowItWorks() {
           </p>
         </Reveal>
 
-        <div className="stack flow-sm mt-3">
+        <div className="cardgrid cardgrid--4 mt-3">
           {STEPS.map((step, i) => (
             <Reveal key={step.n} delay={i * 0.05}>
               <div className="card card--pad">
@@ -64,35 +64,30 @@ export function HowItWorks() {
         </div>
 
         <h2 className="h3 mt-4 mb-2">The rules, plainly</h2>
-        <div className="card card--pad">
-          {RULES.map(([label, when, detail], i) => (
-            <div
-              key={label}
-              style={{
-                paddingBlock: "var(--sp-3)",
-                borderTop: i ? "1px solid var(--line-2)" : undefined,
-              }}
-            >
-              <div className="between">
-                <b className="sm">{label}</b>
-                <span className="tiny muted num">{when}</span>
-              </div>
-              <p className="tiny muted mt-1">{detail}</p>
+        <div className="split split--stretch" style={{ marginBottom: "var(--sp-8)" }}>
+          <div className="split__main">
+            <div className="card card--pad rules">
+              {RULES.map(([label, when, detail]) => (
+                <div key={label} className="rules__row">
+                  <div className="between">
+                    <b className="sm">{label}</b>
+                    <span className="tiny muted num">{when}</span>
+                  </div>
+                  <p className="tiny muted mt-1">{detail}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-
-        <Reveal>
-          <div
-            className="card card--pad mt-3 center"
-            style={{ background: "var(--panel)", color: "var(--on-panel)", marginBottom: "var(--sp-8)" }}
-          >
-            <h2 className="h3">Ready when you are.</h2>
-            <Link to="/packages" className="btn btn--primary mt-3">
-              See the packages <Icon.arrow />
-            </Link>
           </div>
-        </Reveal>
+
+          <Reveal>
+            <div className="card card--pad center ctapanel" style={{ background: "var(--panel)", color: "var(--on-panel)" }}>
+              <h2 className="h3">Ready when you are.</h2>
+              <Link to="/packages" className="btn btn--primary mt-3">
+                See the packages <Icon.arrow />
+              </Link>
+            </div>
+          </Reveal>
+        </div>
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppBar, Logo } from "../components/Shell";
 import { Spinner } from "../components/ui";
 import { ApiError, api, type User } from "../lib/api";
+import { photo } from "../lib/photos";
 import { toast, useAuth } from "../store/useStore";
 
 interface OtpResponse {
@@ -105,99 +106,114 @@ export function Login() {
   return (
     <>
       <AppBar back="/" />
-      <div className="shell" style={{ paddingTop: "var(--sp-6)" }}>
-        <Logo className="" />
-        <AnimatePresence mode="wait">
-          {stage === "phone" ? (
-            <motion.div
-              key="phone"
-              initial={{ opacity: 0, x: -14 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -14 }}
-              transition={{ duration: 0.25 }}
-            >
-              <h1 className="display mt-3">Sign in.</h1>
-              <p className="lede mt-1">We send a six digit code. No password to remember.</p>
+      <div className="shell auth">
+        <aside className="auth__panel">
+          <img {...photo("pour", 900, 1100)} />
+          <div className="auth__over">
+            <span className="eyebrow">Firstlight</span>
+            <h2 className="h2 mt-1">Milk at your gate before six.</h2>
+            <ul className="auth__points">
+              <li>Milked at 4.30, on the road by 5.30</li>
+              <li>Skip, change or pause any day</li>
+              <li>One wallet, no cash at the gate</li>
+            </ul>
+          </div>
+        </aside>
 
-              <form onSubmit={requestCode} className="mt-3">
-                <label className="field">
-                  <span className="label">Mobile number</span>
-                  <input
-                    className="input num"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="98765 43210"
-                    inputMode="numeric"
-                    autoComplete="tel-national"
-                    autoFocus
-                  />
-                </label>
-                <label className="field">
-                  <span className="label">Name (first time only)</span>
-                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-                </label>
-                <button className="btn btn--primary btn--lg btn--block mt-3" disabled={busy}>
-                  {busy ? <Spinner /> : null} Send code
-                </button>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="code"
-              initial={{ opacity: 0, x: 14 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 14 }}
-              transition={{ duration: 0.25 }}
-            >
-              <h1 className="display mt-3">Enter the code.</h1>
-              <p className="lede mt-1">
-                Sent to {phone}.{" "}
-                <button className="linkish" onClick={() => setStage("phone")}>
-                  Change
-                </button>
-              </p>
+        <div className="auth__form">
+          <Logo className="" />
+          <AnimatePresence mode="wait">
+            {stage === "phone" ? (
+              <motion.div
+                key="phone"
+                initial={{ opacity: 0, x: -14 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -14 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h1 className="display mt-3">Sign in.</h1>
+                <p className="lede mt-1">We send a six digit code. No password to remember.</p>
 
-              <div className="otp mt-3">
-                {digits.map((d, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => {
-                      boxes.current[i] = el;
-                    }}
-                    value={d}
-                    onChange={(e) => onDigit(i, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Backspace" && !digits[i] && i > 0) boxes.current[i - 1]?.focus();
-                    }}
-                    inputMode="numeric"
-                    maxLength={6}
-                    aria-label={`Digit ${i + 1}`}
-                    autoComplete={i === 0 ? "one-time-code" : "off"}
-                  />
-                ))}
-              </div>
+                <form onSubmit={requestCode} className="mt-3">
+                  <label className="field">
+                    <span className="label">Mobile number</span>
+                    <input
+                      className="input num"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      placeholder="98765 43210"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
+                      autoFocus
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="label">Name (first time only)</span>
+                    <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                  </label>
+                  <button className="btn btn--primary btn--lg btn--block mt-3" disabled={busy}>
+                    {busy ? <Spinner /> : null} Send code
+                  </button>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="code"
+                initial={{ opacity: 0, x: 14 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 14 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h1 className="display mt-3">Enter the code.</h1>
+                <p className="lede mt-1">
+                  Sent to {phone}.{" "}
+                  <button className="linkish" onClick={() => setStage("phone")}>
+                    Change
+                  </button>
+                </p>
 
-              {devCode && (
-                <div className="card card--pad mt-3" style={{ background: "var(--accent-soft)" }}>
-                  <p className="sm" style={{ color: "var(--accent-ink)" }}>
-                    No SMS gateway is connected yet, so here is your code:{" "}
-                    <b className="num" style={{ fontSize: "1.1rem" }}>
-                      {devCode}
-                    </b>
-                  </p>
+                <div className="otp mt-3">
+                  {digits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => {
+                        boxes.current[i] = el;
+                      }}
+                      value={d}
+                      onChange={(e) => onDigit(i, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" && !digits[i] && i > 0) boxes.current[i - 1]?.focus();
+                      }}
+                      inputMode="numeric"
+                      maxLength={6}
+                      aria-label={`Digit ${i + 1}`}
+                      autoComplete={i === 0 ? "one-time-code" : "off"}
+                    />
+                  ))}
                 </div>
-              )}
 
-              <button className="btn btn--ghost btn--block mt-3" onClick={() => requestCode()} disabled={seconds > 0 || busy}>
-                {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                {devCode && (
+                  <div className="card card--pad mt-3" style={{ background: "var(--accent-soft)" }}>
+                    <p className="sm" style={{ color: "var(--accent-ink)" }}>
+                      No SMS gateway is connected yet, so here is your code:{" "}
+                      <b className="num" style={{ fontSize: "1.1rem" }}>
+                        {devCode}
+                      </b>
+                    </p>
+                  </div>
+                )}
 
-        <p className="hint center mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
-          Farm staff? <Link to="/farm/login" className="linkish">Sign in here</Link>.
-        </p>
+                <button className="btn btn--ghost btn--block mt-3" onClick={() => requestCode()} disabled={seconds > 0 || busy}>
+                  {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <p className="hint center mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
+            Farm staff? <Link to="/farm/login" className="linkish">Sign in here</Link>.
+          </p>
+        </div>
       </div>
     </>
   );

@@ -157,6 +157,7 @@
     --t-2xl: 3.2rem;
     --t-3xl: 4.6rem;
     --pad: 2.5rem;
+    --shell: 1280px;
     --bar-h: 72px;
     --grid-size: 46px;
   }

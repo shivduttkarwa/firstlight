@@ -124,145 +124,150 @@ export function Basket() {
         }
       />
 
-      <div className="shell stack">
-        {/* Summary */}
-        <div className="card card--pad" style={{ background: "var(--panel)", color: "var(--on-panel)" }}>
-          <div className="between">
-            <span className="eyebrow eyebrow--bare" style={{ color: "var(--on-panel-dim)" }}>
-              {basket.package_name ?? "Your basket"}
-            </span>
-            <span className={`tag tag--${basket.status}`}>{basket.status}</span>
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-2xl)", lineHeight: 1, marginTop: 10 }}>
-            {money(basket.monthly_estimate)}
-            <span style={{ fontSize: "var(--t-sm)", color: "var(--on-panel-dim)", fontFamily: "var(--font-body)" }}>
-              {" "}
-              /month
-            </span>
-          </div>
-          <div className="sm" style={{ color: "var(--on-panel-dim)", marginTop: 6 }}>
-            {basket.item_count} item{basket.item_count === 1 ? "" : "s"} · to {basket.address_summary}
-          </div>
-          {Number(basket.discount_percent) > 0 && (
-            <div className="chip chip--ok" style={{ marginTop: 10 }}>
-              {Number(basket.discount_percent)}% package discount applied
+      <div className="shell split split--even">
+        <div className="stack">
+          {/* Summary */}
+          <div className="card card--pad" style={{ background: "var(--panel)", color: "var(--on-panel)" }}>
+            <div className="between">
+              <span className="eyebrow eyebrow--bare" style={{ color: "var(--on-panel-dim)" }}>
+                {basket.package_name ?? "Your basket"}
+              </span>
+              <span className={`tag tag--${basket.status}`}>{basket.status}</span>
             </div>
-          )}
-          {paused && basket.resume_on && (
-            <div className="chip chip--accent" style={{ marginTop: 10 }}>
-              Resumes {shortDate(basket.resume_on)}
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-2xl)", lineHeight: 1, marginTop: 10 }}>
+              {money(basket.monthly_estimate)}
+              <span style={{ fontSize: "var(--t-sm)", color: "var(--on-panel-dim)", fontFamily: "var(--font-body)" }}>
+                {" "}
+                /month
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div className="inline">
-          {paused ? (
-            <button className="btn btn--primary btn--sm" disabled={busy} onClick={() => void act("resume", undefined, "Back on the round.")}>
-              Resume now
-            </button>
-          ) : (
-            <>
-              <button
-                className="btn btn--soft btn--sm"
-                disabled={busy}
-                onClick={() => void act("skip-day", { date: toISO(addDays(new Date(), 1)) }, "Tomorrow is off.")}
-              >
-                Skip tomorrow
-              </button>
-              <button
-                className="btn btn--soft btn--sm"
-                disabled={busy}
-                onClick={() => void act("pause", { resume_on: toISO(addDays(new Date(), 8)) }, "Paused for a week.")}
-              >
-                Pause a week
-              </button>
-            </>
-          )}
-          {busy && <Spinner />}
-        </div>
-
-        {/* Today */}
-        {todayLines.length > 0 && (
-          <div>
-            <h2 className="h3 mb-2">Today</h2>
-            {todayLines.map((entry) => (
-              <div key={entry.line} className="row" style={{ ["--accent" as string]: entry.accent }}>
-                <span className="row__art">
-                  <span style={{ fontWeight: 700 }}>{entry.quantity}×</span>
-                </span>
-                <span className="row__main">
-                  <span className="row__t">{entry.name}</span>
-                  <span className="row__s">
-                    {entry.variant_label} · {slotLabel(entry.slot)}
-                  </span>
-                </span>
+            <div className="sm" style={{ color: "var(--on-panel-dim)", marginTop: 6 }}>
+              {basket.item_count} item{basket.item_count === 1 ? "" : "s"} · to {basket.address_summary}
+            </div>
+            {Number(basket.discount_percent) > 0 && (
+              <div className="chip chip--ok" style={{ marginTop: 10 }}>
+                {Number(basket.discount_percent)}% package discount applied
               </div>
-            ))}
+            )}
+            {paused && basket.resume_on && (
+              <div className="chip chip--accent" style={{ marginTop: 10 }}>
+                Resumes {shortDate(basket.resume_on)}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Items */}
-        <div>
-          <div className="sectionhead">
-            <h2 className="h3">What you get</h2>
-            <Link to="/shop" className="linkish">
-              Add item
-            </Link>
-          </div>
-          <div className="stack flow-sm">
-            {basket.lines.map((line) => (
-              <button
-                key={line.id}
-                className="row"
-                onClick={() => setLineOpen(line)}
-                style={{ ["--accent" as string]: line.product.accent }}
-              >
-                <span className="row__art">
-                  <ProductArt kind={line.product.kind} accent={line.product.accent} size="70%" />
-                </span>
-                <span className="row__main">
-                  <span className="row__t">
-                    {line.product.name} · {line.product.variant_label}
-                  </span>
-                  <span className="row__s">
-                    {line.quantity} × {frequencyLabel(line.frequency, line.weekdays)} · {slotLabel(line.slot)}
-                  </span>
-                </span>
-                <span className="row__end muted">
-                  <Icon.chev />
-                </span>
+          {/* Quick actions */}
+          <div className="inline">
+            {paused ? (
+              <button className="btn btn--primary btn--sm" disabled={busy} onClick={() => void act("resume", undefined, "Back on the round.")}>
+                Resume now
               </button>
-            ))}
+            ) : (
+              <>
+                <button
+                  className="btn btn--soft btn--sm"
+                  disabled={busy}
+                  onClick={() => void act("skip-day", { date: toISO(addDays(new Date(), 1)) }, "Tomorrow is off.")}
+                >
+                  Skip tomorrow
+                </button>
+                <button
+                  className="btn btn--soft btn--sm"
+                  disabled={busy}
+                  onClick={() => void act("pause", { resume_on: toISO(addDays(new Date(), 8)) }, "Paused for a week.")}
+                >
+                  Pause a week
+                </button>
+              </>
+            )}
+            {busy && <Spinner />}
           </div>
-        </div>
 
-        {/* Calendar */}
-        <div>
-          <div className="sectionhead">
-            <h2 className="h3">Next 30 days</h2>
-            <span className="tiny muted">Tap a day to change it</span>
-          </div>
-          {calendar === null ? (
-            <Skeletons count={1} height={230} />
-          ) : (
-            <CalendarGrid days={calendar} onPick={setDayOpen} />
+          {/* Today */}
+          {todayLines.length > 0 && (
+            <div>
+              <h2 className="h3 mb-2">Today</h2>
+              {todayLines.map((entry) => (
+                <div key={entry.line} className="row" style={{ ["--accent" as string]: entry.accent }}>
+                  <span className="row__art">
+                    <span style={{ fontWeight: 700 }}>{entry.quantity}×</span>
+                  </span>
+                  <span className="row__main">
+                    <span className="row__t">{entry.name}</span>
+                    <span className="row__s">
+                      {entry.variant_label} · {slotLabel(entry.slot)}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
+
+          {/* Items */}
+          <div>
+            <div className="sectionhead">
+              <h2 className="h3">What you get</h2>
+              <Link to="/shop" className="linkish">
+                Add item
+              </Link>
+            </div>
+            <div className="stack flow-sm">
+              {basket.lines.map((line) => (
+                <button
+                  key={line.id}
+                  className="row"
+                  onClick={() => setLineOpen(line)}
+                  style={{ ["--accent" as string]: line.product.accent }}
+                >
+                  <span className="row__art">
+                    <ProductArt kind={line.product.kind} accent={line.product.accent} size="70%" />
+                  </span>
+                  <span className="row__main">
+                    <span className="row__t">
+                      {line.product.name} · {line.product.variant_label}
+                    </span>
+                    <span className="row__s">
+                      {line.quantity} × {frequencyLabel(line.frequency, line.weekdays)} · {slotLabel(line.slot)}
+                    </span>
+                  </span>
+                  <span className="row__end muted">
+                    <Icon.chev />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
 
-        {calendar && <ChangesList days={calendar} onPick={setDayOpen} />}
+        <div className="stack">
+          {/* Calendar */}
+          <div>
+            <div className="sectionhead">
+              <h2 className="h3">Next 30 days</h2>
+              <span className="tiny muted">Tap a day to change it</span>
+            </div>
+            {calendar === null ? (
+              <Skeletons count={1} height={230} />
+            ) : (
+              <CalendarGrid days={calendar} onPick={setDayOpen} />
+            )}
+          </div>
 
-        <button
-          className="btn btn--danger btn--block"
-          disabled={busy}
-          onClick={() => {
-            if (confirm("Cancel this basket? Your deliveries will stop.")) {
-              void act("cancel", undefined, "Basket cancelled.").then(() => navigate("/"));
-            }
-          }}
-        >
-          Cancel subscription
-        </button>
+          {calendar && <ChangesList days={calendar} onPick={setDayOpen} />}
+
+          <button
+            className="btn btn--danger btn--block"
+            disabled={busy}
+            onClick={() => {
+              if (confirm("Cancel this basket? Your deliveries will stop.")) {
+                void act("cancel", undefined, "Basket cancelled.").then(() => navigate("/"));
+              }
+            }}
+          >
+            Cancel subscription
+          </button>
+        </div>
       </div>
 
       <DaySheet

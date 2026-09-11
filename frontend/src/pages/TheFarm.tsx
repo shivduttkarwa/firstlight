@@ -45,61 +45,66 @@ export function TheFarm() {
     <>
       <AppBar back title="The farm" />
       <div className="shell">
-        <Reveal>
-          <span className="eyebrow">Where it comes from</span>
-          <h1 className="display mt-1">
-            A single shed in <span className="ital">Sriganganagar</span>.
-          </h1>
-          <p className="lede mt-2">
-            Firstlight is not a collection network. Everything we sell comes off one piece of land, from animals we
-            look after ourselves.
-          </p>
-          <div className="figure mt-3" style={{ aspectRatio: "3 / 2" }}>
-            <img {...photo("cow", 900, 600)} />
-            <div className="figure__over">
-              <span className="eyebrow">The herd, before the heat comes up</span>
-            </div>
-          </div>
-        </Reveal>
+        <div className="farmintro">
+          <Reveal className="farmintro__text">
+            <span className="eyebrow">Where it comes from</span>
+            <h1 className="display mt-1">
+              A single shed in <span className="ital">Sriganganagar</span>.
+            </h1>
+            <p className="lede mt-2">
+              Firstlight is not a collection network. Everything we sell comes off one piece of land, from animals we
+              look after ourselves.
+            </p>
+          </Reveal>
 
-        <Reveal delay={0.05}>
-          <div className="card card--pad mt-3">
-            <span className="eyebrow">Find us</span>
-            <address
-              style={{
-                fontStyle: "normal",
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--t-md)",
-                lineHeight: 1.6,
-                marginTop: "var(--sp-3)",
-              }}
-            >
-              {lines.map((line) => (
-                <span key={line} style={{ display: "block" }}>
-                  {line}
-                </span>
-              ))}
-            </address>
-            <hr className="rule" />
-            <div className="stack flow-sm">
-              <div className="between">
-                <span className="inline" style={{ gap: 8 }}>
-                  <Icon.sun /> Morning round
-                </span>
-                <span className="muted sm">5.30 – 8.00 am</span>
-              </div>
-              <div className="between">
-                <span className="inline" style={{ gap: 8 }}>
-                  <Icon.moon /> Evening round
-                </span>
-                <span className="muted sm">5.00 – 7.30 pm</span>
+          <Reveal className="farmintro__fig">
+            <div className="figure" style={{ aspectRatio: "3 / 2" }}>
+              <img {...photo("cow", 1200, 800)} />
+              <div className="figure__over">
+                <span className="eyebrow">The herd, before the heat comes up</span>
               </div>
             </div>
-          </div>
-        </Reveal>
+          </Reveal>
+
+          <Reveal delay={0.05} className="farmintro__find">
+            <div className="card card--pad">
+              <span className="eyebrow">Find us</span>
+              <address
+                style={{
+                  fontStyle: "normal",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "var(--t-md)",
+                  lineHeight: 1.6,
+                  marginTop: "var(--sp-3)",
+                }}
+              >
+                {lines.map((line) => (
+                  <span key={line} style={{ display: "block" }}>
+                    {line}
+                  </span>
+                ))}
+              </address>
+              <hr className="rule" />
+              <div className="stack flow-sm">
+                <div className="between">
+                  <span className="inline" style={{ gap: 8 }}>
+                    <Icon.sun /> Morning round
+                  </span>
+                  <span className="muted sm">5.30 – 8.00 am</span>
+                </div>
+                <div className="between">
+                  <span className="inline" style={{ gap: 8 }}>
+                    <Icon.moon /> Evening round
+                  </span>
+                  <span className="muted sm">5.00 – 7.30 pm</span>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
 
         <h2 className="h3 mt-3 mb-2">The herd</h2>
-        <div className="stack flow-sm">
+        <div className="cardgrid cardgrid--4">
           {HERD.map((item, i) => (
             <Reveal key={item.name} delay={i * 0.05}>
               <div className="row" style={{ alignItems: "flex-start" }}>

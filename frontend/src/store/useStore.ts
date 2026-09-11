@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, tokens, type Address, type Basket, type StaffUser, type User } from "../lib/api";
+import { ApiError, api, tokens, type Address, type Basket, type StaffUser, type User } from "../lib/api";
 
 interface AuthState {
   user: User | null;
@@ -18,6 +18,8 @@ interface AuthState {
 }
 
 const STAFF_KEY = "fl.staff";
+
+const isSignedOut = (e: unknown) => e instanceof ApiError && (e.status === 401 || e.status === 403);
 
 export const useAuth = create<AuthState>((set, get) => ({
   user: null,
@@ -57,24 +59,25 @@ export const useAuth = create<AuthState>((set, get) => ({
       try {
         await api.get("/farm/overview/");
         set({ staff: JSON.parse(stored) as StaffUser, ready: true });
-        return;
-      } catch {
-        tokens.clear();
-        localStorage.removeItem(STAFF_KEY);
+      } catch (e) {
+        if (isSignedOut(e)) {
+          tokens.clear();
+          localStorage.removeItem(STAFF_KEY);
+        }
         set({ staff: null, ready: true });
-        return;
       }
+      return;
     }
     try {
-      const user = await api.get<User>("/auth/me/");
-      set({ user });
-      await Promise.all([get().loadAddresses(), get().loadBaskets()]);
-    } catch {
-      tokens.clear();
-      set({ user: null });
-    } finally {
+      set({ user: await api.get<User>("/auth/me/") });
+    } catch (e) {
+      // A dropped connection or a server restart is not a reason to forget the login.
+      if (isSignedOut(e)) tokens.clear();
       set({ ready: true });
+      return;
     }
+    await Promise.all([get().loadAddresses(), get().loadBaskets()]).catch(() => undefined);
+    set({ ready: true });
   },
 
   refreshUser: async () => {

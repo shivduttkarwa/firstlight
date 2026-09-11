@@ -1,7 +1,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
-import { CUSTOMER_TABS, FARM_TABS, FarmNav, TabBar } from "./components/Shell";
+import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, TabBar } from "./components/Shell";
 import { PageFade, Skeletons, Toaster } from "./components/ui";
 import { Account, Addresses, Deliveries, WalletPage } from "./pages/Account";
 import { Basket } from "./pages/Basket";
@@ -56,6 +56,7 @@ function CustomerShell() {
   return (
     <>
       <FadingOutlet />
+      <SiteFooter />
       <TabBar tabs={CUSTOMER_TABS} />
     </>
   );

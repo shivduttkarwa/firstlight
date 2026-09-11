@@ -38,15 +38,17 @@ function SignedOut() {
   return (
     <>
       <AppBar title="You" />
-      <div className="shell">
-        <span className="eyebrow">Your account</span>
-        <h1 className="display mt-1">Sign in to see your round.</h1>
-        <p className="lede mt-2">
-          Your basket, your deliveries and your wallet all live here. A phone number and a one-time code is all it
-          takes — no password to remember.
-        </p>
+      <div className="shell youout">
+        <div className="youout__intro">
+          <span className="eyebrow">Your account</span>
+          <h1 className="display mt-1">Sign in to see your round.</h1>
+          <p className="lede mt-2">
+            Your basket, your deliveries and your wallet all live here. A phone number and a one-time code is all it
+            takes — no password to remember.
+          </p>
+        </div>
 
-        <div className="stack flow-sm mt-3">
+        <div className="stack flow-sm mt-3 youout__rows">
           {[
             ["Your basket", "What goes out, and on which days", <Icon.basket key="b" />],
             ["Deliveries", "Every drop, morning and evening", <Icon.calendar key="c" />],
@@ -62,12 +64,14 @@ function SignedOut() {
           ))}
         </div>
 
-        <Link to="/login?next=/account" className="btn btn--primary btn--lg btn--block mt-3">
-          Sign in <Icon.arrow />
-        </Link>
-        <p className="hint center mt-2" style={{ paddingBottom: "var(--sp-8)" }}>
-          New here? The same code signs you up.
-        </p>
+        <div className="youout__cta">
+          <Link to="/login?next=/account" className="btn btn--primary btn--lg btn--block mt-3">
+            Sign in <Icon.arrow />
+          </Link>
+          <p className="hint center mt-2" style={{ paddingBottom: "var(--sp-8)" }}>
+            New here? The same code signs you up.
+          </p>
+        </div>
       </div>
     </>
   );
@@ -94,126 +98,130 @@ export function Account() {
   return (
     <RequireUser>
       <AppBar title="You" />
-      <div className="shell">
-        <div className="inline" style={{ gap: "var(--sp-4)", flexWrap: "nowrap" }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              flex: "none",
-              borderRadius: "var(--r-md)",
-              background: "var(--panel)",
-              color: "var(--accent)",
-              display: "grid",
-              placeItems: "center",
-              fontFamily: "var(--font-display)",
-              fontSize: "1.4rem",
+      <div className="shell split split--even">
+        <div>
+          <div className="inline" style={{ gap: "var(--sp-4)", flexWrap: "nowrap" }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                flex: "none",
+                borderRadius: "var(--r-md)",
+                background: "var(--panel)",
+                color: "var(--accent)",
+                display: "grid",
+                placeItems: "center",
+                fontFamily: "var(--font-display)",
+                fontSize: "1.4rem",
+              }}
+            >
+              {(user?.full_name || user?.phone || "?").slice(0, 1).toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="h2">{user?.full_name || "Your account"}</h1>
+              <p className="sm muted">{user?.phone}</p>
+            </div>
+          </div>
+
+          <div className="tiles mt-3">
+            <Link to="/account/wallet" className="tile">
+              <div className="tile__k">Wallet</div>
+              <div className="tile__v num">{money(summary?.wallet_balance ?? user?.wallet_balance ?? 0)}</div>
+            </Link>
+            <div className="tile">
+              <div className="tile__k">This month</div>
+              <div className="tile__v num">{money(summary?.spend_this_month ?? 0)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="stack flow-sm">
+            <Link to="/basket" className="row">
+              <span className="row__art" style={{ background: "var(--brand-soft)" }}>
+                <Icon.basket />
+              </span>
+              <span className="row__main">
+                <span className="row__t">My basket</span>
+                <span className="row__s">
+                  {baskets[0] ? `${baskets[0].item_count} items · ${money(baskets[0].monthly_estimate)}/month` : "Nothing yet"}
+                </span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+
+            <Link to="/account/deliveries" className="row">
+              <span className="row__art" style={{ background: "var(--accent-soft)" }}>
+                <Icon.calendar />
+              </span>
+              <span className="row__main">
+                <span className="row__t">Deliveries</span>
+                <span className="row__s">{summary?.delivered_this_month ?? 0} delivered this month</span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+
+            <Link to="/account/wallet" className="row">
+              <span className="row__art" style={{ background: "var(--ok-soft)" }}>
+                <Icon.wallet />
+              </span>
+              <span className="row__main">
+                <span className="row__t">Wallet &amp; payments</span>
+                <span className="row__s">Top up, see every charge</span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+
+            <Link to="/account/addresses" className="row">
+              <span className="row__art">
+                <Icon.pin />
+              </span>
+              <span className="row__main">
+                <span className="row__t">Addresses</span>
+                <span className="row__s">Where the milk is left</span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+          </div>
+
+          <div className="stack flow-sm mt-3">
+            <Link to="/the-farm" className="row">
+              <span className="row__main">
+                <span className="row__t">The farm</span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+            <Link to="/how-it-works" className="row">
+              <span className="row__main">
+                <span className="row__t">How it works</span>
+              </span>
+              <span className="row__end muted">
+                <Icon.chev />
+              </span>
+            </Link>
+          </div>
+
+          <button
+            className="btn btn--ghost btn--block mt-3"
+            style={{ marginBottom: "var(--sp-8)" }}
+            onClick={() => {
+              signOut();
+              navigate("/");
             }}
           >
-            {(user?.full_name || user?.phone || "?").slice(0, 1).toUpperCase()}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <h1 className="h2">{user?.full_name || "Your account"}</h1>
-            <p className="sm muted">{user?.phone}</p>
-          </div>
+            Sign out
+          </button>
         </div>
-
-        <div className="tiles mt-3">
-          <Link to="/account/wallet" className="tile">
-            <div className="tile__k">Wallet</div>
-            <div className="tile__v num">{money(summary?.wallet_balance ?? user?.wallet_balance ?? 0)}</div>
-          </Link>
-          <div className="tile">
-            <div className="tile__k">This month</div>
-            <div className="tile__v num">{money(summary?.spend_this_month ?? 0)}</div>
-          </div>
-        </div>
-
-        <div className="stack flow-sm mt-3">
-          <Link to="/basket" className="row">
-            <span className="row__art" style={{ background: "var(--brand-soft)" }}>
-              <Icon.basket />
-            </span>
-            <span className="row__main">
-              <span className="row__t">My basket</span>
-              <span className="row__s">
-                {baskets[0] ? `${baskets[0].item_count} items · ${money(baskets[0].monthly_estimate)}/month` : "Nothing yet"}
-              </span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-
-          <Link to="/account/deliveries" className="row">
-            <span className="row__art" style={{ background: "var(--accent-soft)" }}>
-              <Icon.calendar />
-            </span>
-            <span className="row__main">
-              <span className="row__t">Deliveries</span>
-              <span className="row__s">{summary?.delivered_this_month ?? 0} delivered this month</span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-
-          <Link to="/account/wallet" className="row">
-            <span className="row__art" style={{ background: "var(--ok-soft)" }}>
-              <Icon.wallet />
-            </span>
-            <span className="row__main">
-              <span className="row__t">Wallet &amp; payments</span>
-              <span className="row__s">Top up, see every charge</span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-
-          <Link to="/account/addresses" className="row">
-            <span className="row__art">
-              <Icon.pin />
-            </span>
-            <span className="row__main">
-              <span className="row__t">Addresses</span>
-              <span className="row__s">Where the milk is left</span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-        </div>
-
-        <div className="stack flow-sm mt-3">
-          <Link to="/the-farm" className="row">
-            <span className="row__main">
-              <span className="row__t">The farm</span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-          <Link to="/how-it-works" className="row">
-            <span className="row__main">
-              <span className="row__t">How it works</span>
-            </span>
-            <span className="row__end muted">
-              <Icon.chev />
-            </span>
-          </Link>
-        </div>
-
-        <button
-          className="btn btn--ghost btn--block mt-3"
-          style={{ marginBottom: "var(--sp-8)" }}
-          onClick={() => {
-            signOut();
-            navigate("/");
-          }}
-        >
-          Sign out
-        </button>
       </div>
     </RequireUser>
   );
@@ -251,8 +259,8 @@ export function WalletPage() {
   return (
     <RequireUser>
       <AppBar back="/account" title="Wallet" />
-      <div className="shell">
-        <div className="card card--pad" style={{ background: "var(--panel)", color: "var(--on-panel)" }}>
+      <div className="shell split split--lead">
+        <div className="card card--pad split__aside" style={{ background: "var(--panel)", color: "var(--on-panel)" }}>
           <span className="eyebrow eyebrow--bare" style={{ color: "var(--on-panel-dim)" }}>
             Balance
           </span>
@@ -267,48 +275,50 @@ export function WalletPage() {
           </button>
         </div>
 
-        <h2 className="h3 mt-3 mb-2">Recent activity</h2>
-        {wallet === null ? (
-          <Skeletons count={4} height={62} />
-        ) : wallet.transactions.length === 0 ? (
-          <Empty title="Nothing yet" body="Top-ups and delivery charges will show up here." />
-        ) : (
-          <div className="stack flow-sm" style={{ paddingBottom: "var(--sp-8)" }}>
-            {wallet.transactions.map((t) => (
-              <div key={t.id} className="row">
-                <span
-                  className="row__art"
-                  style={{ background: t.kind === "credit" ? "var(--ok-soft)" : "var(--line-2)" }}
-                >
-                  {t.kind === "credit" ? <Icon.plus /> : <Icon.basket />}
-                </span>
-                <span className="row__main">
-                  <span className="row__t" style={{ whiteSpace: "normal" }}>
-                    {t.note}
-                  </span>
-                  <span className="row__s">
-                    {new Date(t.created_at).toLocaleString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </span>
-                <span className="row__end">
+        <div>
+          <h2 className="h3 mb-2">Recent activity</h2>
+          {wallet === null ? (
+            <Skeletons count={4} height={62} />
+          ) : wallet.transactions.length === 0 ? (
+            <Empty title="Nothing yet" body="Top-ups and delivery charges will show up here." />
+          ) : (
+            <div className="stack flow-sm" style={{ paddingBottom: "var(--sp-8)" }}>
+              {wallet.transactions.map((t) => (
+                <div key={t.id} className="row">
                   <span
-                    className="num"
-                    style={{ fontWeight: 700, color: t.kind === "credit" ? "var(--ok)" : "var(--ink)" }}
+                    className="row__art"
+                    style={{ background: t.kind === "credit" ? "var(--ok-soft)" : "var(--line-2)" }}
                   >
-                    {t.kind === "credit" ? "+" : "−"}
-                    {money(t.amount, true)}
+                    {t.kind === "credit" ? <Icon.plus /> : <Icon.basket />}
                   </span>
-                  <span className="row__s num">{money(t.balance_after, true)}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+                  <span className="row__main">
+                    <span className="row__t" style={{ whiteSpace: "normal" }}>
+                      {t.note}
+                    </span>
+                    <span className="row__s">
+                      {new Date(t.created_at).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </span>
+                  <span className="row__end">
+                    <span
+                      className="num"
+                      style={{ fontWeight: 700, color: t.kind === "credit" ? "var(--ok)" : "var(--ink)" }}
+                    >
+                      {t.kind === "credit" ? "+" : "−"}
+                      {money(t.amount, true)}
+                    </span>
+                    <span className="row__s num">{money(t.balance_after, true)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Sheet
@@ -408,7 +418,7 @@ export function Deliveries() {
             }
           />
         ) : (
-          <div className="stack" style={{ paddingBottom: "var(--sp-8)" }}>
+          <div className="stack delivgrid" style={{ paddingBottom: "var(--sp-8)" }}>
             {grouped.map(([date, { items, skipped }]) => (
               <div key={date}>
                 <div className="between mb-2">
@@ -527,7 +537,7 @@ export function Addresses() {
             }
           />
         ) : (
-          <div className="stack flow-sm">
+          <div className="stack flow-sm addrgrid">
             {addresses.map((a) => (
               <div key={a.id} className="card card--pad">
                 <div className="between">
@@ -564,7 +574,7 @@ export function Addresses() {
                 </div>
               </div>
             ))}
-            <button className="btn btn--soft btn--block" onClick={() => setAdding(true)}>
+            <button className="btn btn--soft btn--block addrgrid__add" onClick={() => setAdding(true)}>
               <Icon.plus /> Add another address
             </button>
           </div>

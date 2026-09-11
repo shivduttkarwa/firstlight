@@ -52,19 +52,24 @@ export function Home() {
       <AppBar over={!user} />
 
       {user ? (
-        <section className="shell" style={{ paddingTop: "var(--sp-2)" }}>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <section className="shell dash" style={{ paddingTop: "var(--sp-2)" }}>
+          <motion.div
+            className="dash__hello"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <p className="eyebrow eyebrow--bare muted">{greeting()}</p>
             <h1 className="display" style={{ marginTop: 2 }}>
               {user.full_name?.split(" ")[0] || "Welcome"}.
             </h1>
           </motion.div>
 
-          <div className="mt-3">
+          <div className="mt-3 dash__next">
             <NextDeliveryCard summary={summary} />
           </div>
 
-          <div className="tiles mt-2">
+          <div className="tiles mt-2 dash__tiles">
             <Link to="/account/wallet" className="tile">
               <div className="tile__k">Wallet</div>
               <div className="tile__v num">{money(summary?.wallet_balance ?? user.wallet_balance)}</div>
@@ -76,7 +81,7 @@ export function Home() {
           </div>
 
           {basket && (
-            <Link to="/basket" className="row mt-2">
+            <Link to="/basket" className="row mt-2 dash__row">
               <span className="row__art" style={{ background: "var(--accent-soft)" }}>
                 <Icon.calendar />
               </span>

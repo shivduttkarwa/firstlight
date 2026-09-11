@@ -32,9 +32,11 @@ export function Shop() {
     <>
       <AppBar title="Shop" />
 
-      <div className="shell">
-        <h1 className="display">Everything off one farm.</h1>
-        <p className="lede mt-1">Subscribe for a daily round, or add a one-off to your basket.</p>
+      <div className="shell pagehead">
+        <div>
+          <h1 className="display">Everything off one farm.</h1>
+          <p className="lede mt-1">Subscribe for a daily round, or add a one-off to your basket.</p>
+        </div>
       </div>
 
       <div className="shell mt-3">
@@ -57,10 +59,10 @@ export function Shop() {
         ) : shown.length === 0 ? (
           <Empty title="Nothing here" body="We are not delivering this one at the moment." />
         ) : (
-          <div className="stack flow-sm">
+          <div className="pgrid">
             {shown.map((p, i) => (
               <Reveal key={p.id} delay={Math.min(i, 6) * 0.04}>
-                <ProductRow product={p} />
+                <ProductCard product={p} />
               </Reveal>
             ))}
           </div>
@@ -70,41 +72,29 @@ export function Shop() {
   );
 }
 
-function ProductRow({ product }: { product: Product }) {
+function ProductCard({ product }: { product: Product }) {
   return (
-    <Link
-      to={`/product/${product.slug}`}
-      className="card"
-      style={{ display: "flex", gap: "var(--sp-4)", padding: "var(--sp-3)", alignItems: "center" }}
-    >
+    <Link to={`/product/${product.slug}`} className="card pcard">
       <div
+        className="pcard__art"
         style={{
-          width: 84,
-          height: 84,
-          flex: "none",
-          borderRadius: "var(--r-md)",
-          display: "grid",
-          placeItems: "center",
           background: `linear-gradient(160deg, color-mix(in srgb, ${product.accent} 30%, var(--surface)), var(--surface) 82%)`,
-          overflow: "hidden",
         }}
       >
         {product.image ? (
-          <img src={product.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={product.image} alt="" />
         ) : (
           <ProductArt kind={product.kind} accent={product.accent} size="62%" />
         )}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="between" style={{ alignItems: "flex-start" }}>
-          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-md)" }}>{product.name}</h3>
+      <div className="pcard__body">
+        <div className="pcard__head">
+          <h3 className="pcard__name">{product.name}</h3>
           {product.badge && <span className="chip chip--accent">{product.badge}</span>}
         </div>
-        <p className="sm muted" style={{ marginTop: 2 }}>
-          {product.tagline}
-        </p>
-        <div className="between mt-1">
+        <p className="sm muted pcard__tag">{product.tagline}</p>
+        <div className="pcard__foot">
           <span className="chips">
             {product.slots.map((s) => (
               <span key={s} className="chip">
@@ -113,9 +103,7 @@ function ProductRow({ product }: { product: Product }) {
               </span>
             ))}
           </span>
-          <span className="num" style={{ fontWeight: 700 }}>
-            {money(product.from_price)}
-          </span>
+          <span className="num pcard__price">{money(product.from_price)}</span>
         </div>
       </div>
     </Link>
