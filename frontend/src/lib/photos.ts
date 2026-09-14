@@ -182,6 +182,112 @@ export function storyImage(sizes = "(min-width: 900px) 680px, 92vw") {
   };
 }
 
+type ProductPhotoRole = "packshot" | "detail" | "lifestyle";
+
+interface ProductPhoto {
+  src: string;
+  alt: string;
+  role: ProductPhotoRole;
+}
+
+const PRODUCT_PHOTOS: Partial<Record<string, Record<ProductPhotoRole, Omit<ProductPhoto, "role">>>> = {
+  "cow-milk": {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-packshot.png`,
+      alt: "A chilled Firstlight Desi Cow Milk bottle in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-detail.png`,
+      alt: "A chilled Firstlight Desi Cow Milk bottle against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-lifestyle.png`,
+      alt: "Firstlight Desi Cow Milk beside a glass in a sunlit farm kitchen",
+    },
+  },
+  "buffalo-milk": {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-packshot.png`,
+      alt: "A chilled Firstlight Murrah Buffalo Milk bottle in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-detail.png`,
+      alt: "A chilled Firstlight Murrah Buffalo Milk bottle against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-lifestyle.png`,
+      alt: "Firstlight Murrah Buffalo Milk beside a glass in a sunlit farm kitchen",
+    },
+  },
+  "desi-cow-ghee": {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-packshot.png`,
+      alt: "A Firstlight Desi Cow Ghee jar in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-detail.png`,
+      alt: "A Firstlight Desi Cow Ghee jar against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-lifestyle.png`,
+      alt: "Firstlight Desi Cow Ghee in a sunlit farm kitchen",
+    },
+  },
+  "buffalo-ghee": {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-packshot.png`,
+      alt: "A Firstlight Buffalo Ghee jar in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-detail.png`,
+      alt: "A Firstlight Buffalo Ghee jar against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-lifestyle.png`,
+      alt: "Firstlight Buffalo Ghee in a sunlit farm kitchen",
+    },
+  },
+  "fresh-curd": {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-packshot.png`,
+      alt: "A Firstlight Fresh Curd clay pot in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-detail.png`,
+      alt: "A Firstlight Fresh Curd clay pot against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-lifestyle.png`,
+      alt: "Firstlight Fresh Curd in a sunlit farm kitchen",
+    },
+  },
+  chhach: {
+    packshot: {
+      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-packshot.png`,
+      alt: "A chilled Firstlight Chhach bottle in soft morning light",
+    },
+    detail: {
+      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-detail.png`,
+      alt: "A chilled Firstlight Chhach bottle against a deep green background",
+    },
+    lifestyle: {
+      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-lifestyle.png`,
+      alt: "Firstlight Chhach beside a glass in a sunlit farm kitchen",
+    },
+  },
+};
+
+export function productPhoto(slug: string, role: ProductPhotoRole = "packshot") {
+  const photo = PRODUCT_PHOTOS[slug]?.[role];
+  return photo ? { ...photo, role } : null;
+}
+
+export function productGallery(slug: string) {
+  return (["detail", "lifestyle", "packshot"] as const)
+    .map((role) => productPhoto(slug, role))
+    .filter((photo): photo is ProductPhoto => photo !== null);
+}
+
 /** One local photograph per step of the morning round, in order. */
 export const STEP_PHOTOS: MorningPhotoKey[] = [
   "morning-shed-wakes",

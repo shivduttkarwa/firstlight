@@ -5,6 +5,7 @@ import { AppBar } from "../components/Shell";
 import { Empty, Icon, Reveal, Skeletons } from "../components/ui";
 import { api, type Product } from "../lib/api";
 import { money, slotLabel } from "../lib/format";
+import { productPhoto } from "../lib/photos";
 
 const FILTERS = [
   { key: "all", label: "Everything" },
@@ -73,6 +74,8 @@ export function Shop() {
 }
 
 function ProductCard({ product }: { product: Product }) {
+  const localPhoto = productPhoto(product.slug);
+
   return (
     <Link to={`/product/${product.slug}`} className="card pcard">
       <div
@@ -81,8 +84,8 @@ function ProductCard({ product }: { product: Product }) {
           background: `linear-gradient(160deg, color-mix(in srgb, ${product.accent} 30%, var(--surface)), var(--surface) 82%)`,
         }}
       >
-        {product.image ? (
-          <img src={product.image} alt="" />
+        {product.image || localPhoto ? (
+          <img src={product.image ?? localPhoto?.src} alt="" loading="lazy" decoding="async" />
         ) : (
           <ProductArt kind={product.kind} accent={product.accent} size="62%" />
         )}

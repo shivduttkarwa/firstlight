@@ -8,6 +8,7 @@ import { AppBar } from "../components/Shell";
 import { Icon, Sheet, Skeletons, Spinner } from "../components/ui";
 import { ApiError, api, type Basket as TBasket, type Frequency, type Product, type Slot, type Variant } from "../lib/api";
 import { WEEKDAYS, frequencyLabel, money, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
+import { productGallery } from "../lib/photos";
 import { toast, useAuth, useOffer } from "../store/useStore";
 
 export function ProductDetail() {
@@ -16,10 +17,12 @@ export function ProductDetail() {
   const [missing, setMissing] = useState(false);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [adding, setAdding] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   useEffect(() => {
     setProduct(null);
     setMissing(false);
+    setPhotoIndex(0);
     void api
       .get<Product>(`/products/${slug}/`)
       .then((p) => {
@@ -75,6 +78,9 @@ export function ProductDetail() {
     );
   }
 
+  const localPhotos = product.image_wide ? [] : productGallery(product.slug);
+  const activePhoto = localPhotos[photoIndex] ?? localPhotos[0];
+
   return (
     <>
       <AppBar back crumb={product.name} />
@@ -89,10 +95,30 @@ export function ProductDetail() {
             background: `linear-gradient(165deg, color-mix(in srgb, ${product.accent} 34%, var(--surface)), var(--surface) 78%)`,
           }}
         >
-          {product.image_wide ? (
-            <img src={product.image_wide} alt={product.name} />
+          {product.image_wide || activePhoto ? (
+            <img
+              src={product.image_wide ?? activePhoto?.src}
+              alt={product.image_wide ? product.name : activePhoto?.alt}
+              decoding="async"
+            />
           ) : (
             <ProductArt kind={product.kind} accent={product.accent} size="52%" />
+          )}
+          {localPhotos.length > 1 && (
+            <div className="pdp__thumbs" aria-label={`${product.name} photos`}>
+              {localPhotos.map((photo, index) => (
+                <button
+                  type="button"
+                  key={photo.role}
+                  className={index === photoIndex ? "pdp__thumb pdp__thumb--on" : "pdp__thumb"}
+                  onClick={() => setPhotoIndex(index)}
+                  aria-label={`Show ${photo.role} photo`}
+                  aria-pressed={index === photoIndex}
+                >
+                  <img src={photo.src} alt="" loading="lazy" decoding="async" />
+                </button>
+              ))}
+            </div>
           )}
         </motion.div>
 

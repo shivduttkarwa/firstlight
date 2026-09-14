@@ -16,7 +16,7 @@ import {
   type Summary,
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { HERO_SLIDES, STEP_PHOTOS, heroImage, morningImage, storyImage } from "../lib/photos";
+import { HERO_SLIDES, STEP_PHOTOS, heroImage, morningImage, productPhoto, storyImage } from "../lib/photos";
 import { useAuth, useSignedIn } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
@@ -605,6 +605,8 @@ function PackageCard({ pkg }: { pkg: Package }) {
 }
 
 function ProductTile({ product }: { product: Product }) {
+  const localPhoto = productPhoto(product.slug);
+
   return (
     <Link
       to={`/product/${product.slug}`}
@@ -618,8 +620,14 @@ function ProductTile({ product }: { product: Product }) {
           background: `linear-gradient(165deg, color-mix(in srgb, ${product.accent} 26%, var(--surface)), var(--surface) 80%)`,
         }}
       >
-        {product.image ? (
-          <img src={product.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {product.image || localPhoto ? (
+          <img
+            src={product.image ?? localPhoto?.src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         ) : (
           <ProductArt kind={product.kind} accent={product.accent} className="" />
         )}
