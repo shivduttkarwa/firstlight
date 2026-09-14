@@ -104,6 +104,45 @@ export function fullBleed(key: PhotoKey) {
   };
 }
 
+const HERO_WIDTHS = [640, 1024];
+const HERO_BASE = `${import.meta.env.BASE_URL}images/hero/`;
+
+interface HeroSlide {
+  key: string;
+  caption: string;
+}
+
+export function heroImage(slide: HeroSlide) {
+  const src = `${HERO_BASE}${slide.key}.webp`;
+  return {
+    src,
+    srcSet: [
+      ...HERO_WIDTHS.map((width) => `${HERO_BASE}${slide.key}-${width}.webp ${width}w`),
+      `${src} 1672w`,
+    ].join(", "),
+    sizes: "100vw",
+    decoding: "async" as const,
+  };
+}
+
+const OFFER_WIDTHS = [480, 720, 1024];
+const OFFER_BASE = `${import.meta.env.BASE_URL}images/offers/`;
+
+export type OfferPhotoKey = "offer-first-month-delivery" | "offer-bilona-ghee" | "offer-refer-neighbour";
+
+export function offerImage(key: OfferPhotoKey, sizes = "(min-width: 900px) 600px, 92vw") {
+  const src = `${OFFER_BASE}${key}.webp`;
+  return {
+    src,
+    srcSet: [
+      ...OFFER_WIDTHS.map((width) => `${OFFER_BASE}${key}-${width}.webp ${width}w`),
+      `${src} 1448w`,
+    ].join(", "),
+    sizes,
+    decoding: "async" as const,
+  };
+}
+
 /**
  * One picture per step of the morning round, in order. StepBlock has an image
  * field, but the CMS API returns it as a bare id, so these stand in until the
@@ -111,9 +150,18 @@ export function fullBleed(key: PhotoKey) {
  */
 export const STEP_PHOTOS: PhotoKey[] = ["shed", "steel", "road", "gate"];
 
-/** The three frames the storefront hero cycles through: product, herd, land. */
+/** The three local frames the storefront hero cycles through. */
 export const HERO_SLIDES = [
-  { key: "pour", caption: "The morning pour" },
-  { key: "cow", caption: "Our Rathi cows" },
-  { key: "field", caption: "First light over the fodder" },
-] satisfies { key: PhotoKey; caption: string }[];
+  {
+    key: "hero-fodder-fields-first-light",
+    caption: "First light over the fodder",
+  },
+  {
+    key: "hero-suratgarh-farm-track-sunrise",
+    caption: "The road through our fields",
+  },
+  {
+    key: "hero-rathi-cows-clean-shelter",
+    caption: "Our Rathi cows",
+  },
+] satisfies HeroSlide[];

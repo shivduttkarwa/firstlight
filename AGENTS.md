@@ -134,7 +134,8 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
   - Reuse existing classes (`.btn`, `.card`, `.row`, `.chip`, `.tag`, `.split`, `.stack`, `.shell`) before inventing new ones.
   - Dark mode flips tokens only.
 - **Breakpoints:**
-  - Phone-first. 900px switches to desktop: `SiteHeader`, breadcrumbs and footer appear, and the bottom tabs hide.
+  - Phone-first. 900px switches to desktop: `SiteHeader` and breadcrumbs appear, and the bottom tabs hide.
+    The footer shows at every width; on phones it ends above the tab bar.
   - `btn--block` is full width; add `btn--desk-auto` to size it to its label on desktop.
   - Long text is capped with `.lede` or `.measure`.
 - **Header:** every page renders `<AppBar>` first. On phones it's the top bar; on desktop it becomes the

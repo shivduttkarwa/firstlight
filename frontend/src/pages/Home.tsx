@@ -16,7 +16,7 @@ import {
   type Summary,
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { HERO_SLIDES, STEP_PHOTOS, fullBleed, photo } from "../lib/photos";
+import { HERO_SLIDES, STEP_PHOTOS, heroImage, photo } from "../lib/photos";
 import { useAuth, useSignedIn } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
@@ -347,7 +347,7 @@ const TICKER = [
 function Ticker() {
   const run = TICKER.concat(TICKER);
   return (
-    <div className="strip mt-3" aria-hidden="true">
+    <div className="strip" aria-hidden="true">
       <div className="strip__track">
         {run.concat(run).map((t, i) => (
           <span key={i}>{t}</span>
@@ -453,7 +453,7 @@ function Hero({ content }: { content: HomeContent | null }) {
           n <= reached + 1 ? (
             <img
               key={slide.key}
-              {...fullBleed(slide.key)}
+              {...heroImage(slide)}
               alt=""
               className={`hero__frame${n === i ? " hero__frame--on" : ""}`}
               loading={n === 0 ? "eager" : "lazy"}

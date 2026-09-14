@@ -1,5 +1,5 @@
-import { AnimatePresence } from "framer-motion";
-import { Suspense, lazy, useEffect } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
 import { ConfirmHost } from "./components/Confirm";
 import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, SiteHeader, TabBar } from "./components/Shell";
@@ -53,14 +53,36 @@ function NotFound() {
 }
 
 /** The page transition, wrapped around the outlet rather than around the whole
-    route tree — anything outside it survives a navigation. */
+    route tree — anything outside it survives a navigation. The old page goes at
+    once and the new one rises in, so there is no wait and no scroll jump. */
 function FadingOutlet() {
-  const location = useLocation();
+  const { pathname } = useLocation();
   const outlet = useOutlet();
+  return <PageFade key={pathname}>{outlet}</PageFade>;
+}
+
+function RouteBar() {
+  const { pathname } = useLocation();
+  const still = useReducedMotion();
+  const last = useRef(pathname);
+  const [run, setRun] = useState(0);
+
+  useEffect(() => {
+    if (last.current === pathname) return;
+    last.current = pathname;
+    setRun((n) => n + 1);
+  }, [pathname]);
+
+  if (!run || still) return null;
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <PageFade key={location.pathname}>{outlet}</PageFade>
-    </AnimatePresence>
+    <motion.span
+      key={run}
+      className="routebar"
+      aria-hidden="true"
+      initial={{ scaleX: 0, opacity: 1 }}
+      animate={{ scaleX: 1, opacity: 0 }}
+      transition={{ scaleX: { duration: 0.55, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.3, delay: 0.45 } }}
+    />
   );
 }
 
@@ -165,6 +187,7 @@ export default function App() {
         </Routes>
       </main>
 
+      <RouteBar />
       <ScrollToTop />
       <ConfirmHost />
       <Toaster />

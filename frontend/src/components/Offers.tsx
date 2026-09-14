@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { photo, type PhotoKey } from "../lib/photos";
+import { offerImage, type OfferPhotoKey } from "../lib/photos";
 import { toast, useAuth, useOffer } from "../store/useStore";
 import { Icon } from "./ui";
 
@@ -16,7 +16,7 @@ interface Offer {
   /** Empty for the neighbour offer, where each household shares its own code. */
   code: string;
   perks: string[];
-  photo: PhotoKey;
+  photo: OfferPhotoKey;
   accent: string;
   to: string;
   cta: string;
@@ -34,7 +34,7 @@ const OFFERS: Offer[] = [
     saveNote: "of month one",
     code: "FIRSTLIGHT20",
     perks: ["Any package", "Credited on the spot", "No delivery fee"],
-    photo: "pour",
+    photo: "offer-first-month-delivery",
     accent: "#c6f24b",
     to: "/packages",
     cta: "Start a subscription",
@@ -50,7 +50,7 @@ const OFFERS: Offer[] = [
     saveNote: "250 g jar",
     code: "GHEEFREE",
     perks: ["Baskets over ₹2,000", "Once per household", "Credited on the spot"],
-    photo: "ghee",
+    photo: "offer-bilona-ghee",
     accent: "#e8b04b",
     to: "/shop",
     cta: "Open the shop",
@@ -66,7 +66,7 @@ const OFFERS: Offer[] = [
     saveNote: "each way",
     code: "",
     perks: ["Unlimited neighbours", "Paid after their first delivery", "Any package"],
-    photo: "road",
+    photo: "offer-refer-neighbour",
     accent: "#4fd6a0",
     to: "/account/wallet",
     cta: "See your wallet",
@@ -232,7 +232,7 @@ export function Offers() {
               aria-label={`${i + 1} of ${OFFERS.length}: ${offer.title}`}
             >
               <motion.div className="offer__media" variants={line}>
-                <img {...photo(offer.photo, 880, 700, "(min-width: 900px) 600px, 92vw")} alt="" />
+                <img {...offerImage(offer.photo)} alt="" />
                 <span className="offer__wash" />
 
                 <div className="offer__seal">
