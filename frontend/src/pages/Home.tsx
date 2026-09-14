@@ -16,7 +16,7 @@ import {
   type Summary,
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { HERO_SLIDES, STEP_PHOTOS, heroImage, morningImage, photo } from "../lib/photos";
+import { HERO_SLIDES, STEP_PHOTOS, heroImage, morningImage, storyImage } from "../lib/photos";
 import { useAuth, useSignedIn } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
@@ -223,10 +223,7 @@ export function Home() {
         <div className="shell">
           <Reveal className="story">
             <div className="figure story__fig">
-              <img
-                {...heroImage(HERO_SLIDES[2], "(min-width: 900px) 680px, 92vw")}
-                alt="Two Rathi cows in a clean open-sided shelter"
-              />
+              <img {...storyImage()} />
               <div className="figure__over">
                 <span className="eyebrow">Sriganganagar, 5.10 am</span>
               </div>

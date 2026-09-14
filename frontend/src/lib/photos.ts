@@ -165,6 +165,23 @@ export function morningImage(key: MorningPhotoKey, sizes = "(min-width: 900px) 5
   };
 }
 
+const STORY_WIDTHS = [480, 720, 1024];
+const STORY_BASE = `${import.meta.env.BASE_URL}images/story/`;
+
+export function storyImage(sizes = "(min-width: 900px) 680px, 92vw") {
+  const src = `${STORY_BASE}why-us-one-farm.webp`;
+  return {
+    src,
+    srcSet: [
+      ...STORY_WIDTHS.map((width) => `${STORY_BASE}why-us-one-farm-${width}.webp ${width}w`),
+      `${src} 1586w`,
+    ].join(", "),
+    sizes,
+    alt: "The farm owner carrying a steel milk can past a Rathi cow and Murrah buffalo",
+    decoding: "async" as const,
+  };
+}
+
 /** One local photograph per step of the morning round, in order. */
 export const STEP_PHOTOS: MorningPhotoKey[] = [
   "morning-shed-wakes",
