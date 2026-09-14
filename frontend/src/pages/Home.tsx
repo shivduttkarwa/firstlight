@@ -16,7 +16,7 @@ import {
   type Summary,
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { HERO_SLIDES, STEP_PHOTOS, heroImage, photo } from "../lib/photos";
+import { HERO_SLIDES, STEP_PHOTOS, heroImage, morningImage, photo } from "../lib/photos";
 import { useAuth, useSignedIn } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
@@ -223,7 +223,10 @@ export function Home() {
         <div className="shell">
           <Reveal className="story">
             <div className="figure story__fig">
-              <img {...photo("field", 960, 720, "(min-width: 900px) 680px, 92vw")} />
+              <img
+                {...heroImage(HERO_SLIDES[2], "(min-width: 900px) 680px, 92vw")}
+                alt="Two Rathi cows in a clean open-sided shelter"
+              />
               <div className="figure__over">
                 <span className="eyebrow">Sriganganagar, 5.10 am</span>
               </div>
@@ -400,7 +403,7 @@ function Morning({ steps }: { steps: { time: string; title: string; body: string
                   viewport={{ once: true, margin: "-15% 0px" }}
                   transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
                 >
-                  <img {...photo(STEP_PHOTOS[i % STEP_PHOTOS.length], 720, 540, "(min-width: 900px) 540px, 80vw")} />
+                  <img {...morningImage(STEP_PHOTOS[i % STEP_PHOTOS.length])} alt="" />
                   <span className="step__n num">{String(i + 1).padStart(2, "0")}</span>
                 </motion.figure>
 

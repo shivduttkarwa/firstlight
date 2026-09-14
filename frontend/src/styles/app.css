@@ -2016,24 +2016,20 @@
   background: var(--bg-2);
   box-shadow: var(--sh-3);
 }
-.offer__media img {
+.offer__half {
+  position: absolute;
+  inset: 0;
   width: 100%;
+  max-width: none;
   height: 100%;
   object-fit: cover;
-  animation: offerDrift 26s ease-in-out infinite alternate;
 }
-@keyframes offerDrift {
-  from {
-    transform: scale(1.06) translate3d(1.2%, 0.6%, 0);
-  }
-  to {
-    transform: scale(1.16) translate3d(-1.6%, -1.2%, 0);
-  }
+/* A pixel of overlap, so no hairline shows between the halves at rest. */
+.offer__half--left {
+  clip-path: inset(0 calc(50% - 1px) 0 0);
 }
-@media (prefers-reduced-motion: reduce) {
-  .offer__media img {
-    transform: scale(1.04);
-  }
+.offer__half--right {
+  clip-path: inset(0 0 0 50%);
 }
 @media (min-width: 900px) {
   .offer__media {
@@ -2083,6 +2079,11 @@
   to {
     transform: rotate(360deg);
   }
+}
+.offer__sealin {
+  grid-area: 1 / 1;
+  display: grid;
+  justify-items: center;
 }
 .offer__sealv {
   font-family: var(--font-display);
@@ -2173,6 +2174,14 @@
   color: rgba(255, 255, 255, 0.58);
 }
 
+.offer__copies {
+  display: grid;
+  align-self: center;
+  min-width: 0;
+}
+.offer__copies > * {
+  grid-area: 1 / 1;
+}
 .offer__copy {
   display: flex;
   flex-direction: column;
@@ -2371,9 +2380,6 @@
     height: 90svh;
     grid-template-rows: minmax(0, 1fr);
     padding-block: var(--sp-6);
-  }
-  .offer__media img {
-    animation: none;
   }
   .offers__aura i {
     filter: none;

@@ -112,7 +112,7 @@ interface HeroSlide {
   caption: string;
 }
 
-export function heroImage(slide: HeroSlide) {
+export function heroImage(slide: HeroSlide, sizes = "100vw") {
   const src = `${HERO_BASE}${slide.key}.webp`;
   return {
     src,
@@ -120,7 +120,7 @@ export function heroImage(slide: HeroSlide) {
       ...HERO_WIDTHS.map((width) => `${HERO_BASE}${slide.key}-${width}.webp ${width}w`),
       `${src} 1672w`,
     ].join(", "),
-    sizes: "100vw",
+    sizes,
     decoding: "async" as const,
   };
 }
@@ -143,12 +143,35 @@ export function offerImage(key: OfferPhotoKey, sizes = "(min-width: 900px) 600px
   };
 }
 
-/**
- * One picture per step of the morning round, in order. StepBlock has an image
- * field, but the CMS API returns it as a bare id, so these stand in until the
- * farm's own photographs are wired through.
- */
-export const STEP_PHOTOS: PhotoKey[] = ["shed", "steel", "road", "gate"];
+const MORNING_WIDTHS = [480, 720, 1024];
+const MORNING_BASE = `${import.meta.env.BASE_URL}images/morning/`;
+
+export type MorningPhotoKey =
+  | "morning-shed-wakes"
+  | "morning-straight-into-steel"
+  | "morning-on-the-road"
+  | "morning-at-your-gate";
+
+export function morningImage(key: MorningPhotoKey, sizes = "(min-width: 900px) 540px, 80vw") {
+  const src = `${MORNING_BASE}${key}.webp`;
+  return {
+    src,
+    srcSet: [
+      ...MORNING_WIDTHS.map((width) => `${MORNING_BASE}${key}-${width}.webp ${width}w`),
+      `${src} 1672w`,
+    ].join(", "),
+    sizes,
+    decoding: "async" as const,
+  };
+}
+
+/** One local photograph per step of the morning round, in order. */
+export const STEP_PHOTOS: MorningPhotoKey[] = [
+  "morning-shed-wakes",
+  "morning-straight-into-steel",
+  "morning-on-the-road",
+  "morning-at-your-gate",
+];
 
 /** The three local frames the storefront hero cycles through. */
 export const HERO_SLIDES = [

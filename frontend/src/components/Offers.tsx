@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Transition, type Variants } from "framer-motion";
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { offerImage, type OfferPhotoKey } from "../lib/photos";
@@ -75,6 +75,7 @@ const OFFERS: Offer[] = [
 ];
 
 const AUTOPLAY = 7200;
+const SPLIT: Transition = { duration: 1, ease: [0.7, 0, 0.3, 1] };
 
 /* The clocks are pinned to when the app loaded, so changing slides doesn't
    quietly restart the countdown. */
@@ -125,31 +126,38 @@ export function Offers() {
     go(e.key === "ArrowRight" ? 1 : -1);
   }
 
-  const slide: Variants = still
+  // The left half of the photo travels one way and the right half the other.
+  const half = (sign: 1 | -1): Variants =>
+    still
+      ? {
+          enter: { opacity: 0 },
+          on: { opacity: 1, transition: { duration: 0.3 } },
+          exit: { opacity: 0, transition: { duration: 0.3 } },
+        }
+      : {
+          enter: (d: number) => ({ y: `${d * sign * 100}%` }),
+          on: { y: "0%", transition: SPLIT },
+          exit: (d: number) => ({ y: `${d * sign * -100}%`, transition: SPLIT }),
+        };
+
+  const copy: Variants = still
     ? {
         enter: { opacity: 0 },
         on: { opacity: 1, transition: { duration: 0.2 } },
         exit: { opacity: 0, transition: { duration: 0.15 } },
       }
     : {
-        enter: (d: number) => ({ opacity: 0, x: d * 56, scale: 0.985 }),
-        on: {
-          opacity: 1,
-          x: 0,
-          scale: 1,
-          transition: {
-            duration: 0.55,
-            ease: [0.2, 0.8, 0.2, 1],
-            staggerChildren: 0.055,
-            delayChildren: 0.1,
-          },
-        },
-        exit: (d: number) => ({
-          opacity: 0,
-          x: d * -56,
-          scale: 0.985,
-          transition: { duration: 0.3, ease: "easeIn" },
-        }),
+        enter: (d: number) => ({ opacity: 0, y: d * 40 }),
+        on: { opacity: 1, y: 0, transition: { ...SPLIT, staggerChildren: 0.05, delayChildren: 0.2 } },
+        exit: (d: number) => ({ opacity: 0, y: d * -40, transition: { duration: 0.45, ease: [0.7, 0, 0.84, 0] } }),
+      };
+
+  const seal: Variants = still
+    ? { enter: { opacity: 0 }, on: { opacity: 1 }, exit: { opacity: 0 } }
+    : {
+        enter: (d: number) => ({ opacity: 0, y: d * 14 }),
+        on: { opacity: 1, y: 0, transition: SPLIT },
+        exit: (d: number) => ({ opacity: 0, y: d * -14, transition: { duration: 0.4 } }),
       };
 
   const line: Variants = still
@@ -219,105 +227,135 @@ export function Offers() {
             else if (flick > 80) go(-1);
           }}
         >
-          <AnimatePresence initial={false} custom={dir}>
-            <motion.article
-              key={offer.id}
-              className="offer"
-              custom={dir}
-              variants={slide}
-              initial="enter"
-              animate="on"
-              exit="exit"
-              aria-roledescription="slide"
-              aria-label={`${i + 1} of ${OFFERS.length}: ${offer.title}`}
-            >
-              <motion.div className="offer__media" variants={line}>
-                <img {...offerImage(offer.photo)} alt="" />
-                <span className="offer__wash" />
+          <article
+            className="offer"
+            aria-roledescription="slide"
+            aria-label={`${i + 1} of ${OFFERS.length}: ${offer.title}`}
+          >
+            <div className="offer__media">
+              {([1, -1] as const).map((sign) => (
+                <AnimatePresence key={sign} initial={false} custom={dir}>
+                  <motion.img
+                    key={offer.id}
+                    {...offerImage(offer.photo)}
+                    alt=""
+                    className={`offer__half offer__half--${sign === 1 ? "left" : "right"}`}
+                    custom={dir}
+                    variants={half(sign)}
+                    initial="enter"
+                    animate="on"
+                    exit="exit"
+                  />
+                </AnimatePresence>
+              ))}
+              <span className="offer__wash" />
 
-                <div className="offer__seal">
-                  <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
-                    <defs>
-                      <path
-                        id={`seal-${offer.id}`}
-                        fill="none"
-                        d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"
-                      />
-                    </defs>
-                    <text>
-                      <textPath href={`#seal-${offer.id}`}>· FIRSTLIGHT · SAVE · LIMITED RUN&nbsp;</textPath>
-                    </text>
-                  </svg>
-                  <span className="offer__sealv">{offer.save}</span>
-                  <span className="offer__sealk">{offer.saveNote}</span>
-                </div>
-
-                <Clock endsAt={OPENED + offer.hours * 3600000} />
-              </motion.div>
-
-              <div className="offer__copy">
-                <motion.span className="eyebrow" variants={line}>
-                  {offer.eyebrow}
-                </motion.span>
-                <motion.h3 className="display offer__title" variants={line}>
-                  {offer.title}
-                </motion.h3>
-                <motion.p className="lede offer__body" variants={line}>
-                  {offer.body}
-                </motion.p>
-
-                <motion.ul className="offer__perks" variants={line}>
-                  {offer.perks.map((p) => (
-                    <li key={p}>
-                      <Icon.tick />
-                      {p}
-                    </li>
-                  ))}
-                </motion.ul>
-
-                <motion.div className="offer__coupon" variants={line}>
-                  <span className="offer__couponk">
-                    <span className="tiny">{offer.code ? "Use code" : "Your code"}</span>
-                    <span className="offer__code">{code || "••••••"}</span>
-                  </span>
-                  {code ? (
-                    <button type="button" className="offer__copybtn" onClick={copyCode}>
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={copied ? "yes" : "no"}
-                          initial={{ opacity: 0, scale: 0.6 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.6 }}
-                          transition={{ duration: 0.16 }}
-                        >
-                          {copied ? <Icon.tick /> : <Icon.copy />}
-                        </motion.span>
-                      </AnimatePresence>
-                      {copied ? "Copied" : "Copy"}
-                    </button>
-                  ) : (
-                    <Link to="/login?next=/account/wallet" className="offer__copybtn">
-                      Sign in
-                    </Link>
-                  )}
-                </motion.div>
-
-                <motion.div className="inline offer__acts" variants={line}>
-                  <Link
-                    to={offer.to}
-                    onClick={() => offer.code && pickCode(offer.code)}
-                    className="btn btn--primary btn--lg"
-                    style={{ "--btn-bg": offer.accent, "--btn-fg": "var(--pine-950)" } as CSSProperties}
+              <div className="offer__seal">
+                <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
+                  <defs>
+                    <path
+                      id="offer-seal-path"
+                      fill="none"
+                      d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"
+                    />
+                  </defs>
+                  <text>
+                    <textPath href="#offer-seal-path">· FIRSTLIGHT · SAVE · LIMITED RUN&nbsp;</textPath>
+                  </text>
+                </svg>
+                <AnimatePresence initial={false} custom={dir}>
+                  <motion.span
+                    key={offer.id}
+                    className="offer__sealin"
+                    custom={dir}
+                    variants={seal}
+                    initial="enter"
+                    animate="on"
+                    exit="exit"
                   >
-                    {offer.cta} <Icon.arrow />
-                  </Link>
-                  <Link to="/how-it-works" className="btn btn--ghost btn--lg">
-                    How it works
-                  </Link>
-                </motion.div>
+                    <span className="offer__sealv">{offer.save}</span>
+                    <span className="offer__sealk">{offer.saveNote}</span>
+                  </motion.span>
+                </AnimatePresence>
               </div>
-            </motion.article>
-          </AnimatePresence>
+
+              <Clock endsAt={OPENED + offer.hours * 3600000} />
+            </div>
+
+            <div className="offer__copies">
+              <AnimatePresence initial={false} custom={dir}>
+                <motion.div
+                  key={offer.id}
+                  className="offer__copy"
+                  custom={dir}
+                  variants={copy}
+                  initial="enter"
+                  animate="on"
+                  exit="exit"
+                >
+                  <motion.span className="eyebrow" variants={line}>
+                    {offer.eyebrow}
+                  </motion.span>
+                  <motion.h3 className="display offer__title" variants={line}>
+                    {offer.title}
+                  </motion.h3>
+                  <motion.p className="lede offer__body" variants={line}>
+                    {offer.body}
+                  </motion.p>
+
+                  <motion.ul className="offer__perks" variants={line}>
+                    {offer.perks.map((p) => (
+                      <li key={p}>
+                        <Icon.tick />
+                        {p}
+                      </li>
+                    ))}
+                  </motion.ul>
+
+                  <motion.div className="offer__coupon" variants={line}>
+                    <span className="offer__couponk">
+                      <span className="tiny">{offer.code ? "Use code" : "Your code"}</span>
+                      <span className="offer__code">{code || "••••••"}</span>
+                    </span>
+                    {code ? (
+                      <button type="button" className="offer__copybtn" onClick={copyCode}>
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={copied ? "yes" : "no"}
+                            initial={{ opacity: 0, scale: 0.6 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.6 }}
+                            transition={{ duration: 0.16 }}
+                          >
+                            {copied ? <Icon.tick /> : <Icon.copy />}
+                          </motion.span>
+                        </AnimatePresence>
+                        {copied ? "Copied" : "Copy"}
+                      </button>
+                    ) : (
+                      <Link to="/login?next=/account/wallet" className="offer__copybtn">
+                        Sign in
+                      </Link>
+                    )}
+                  </motion.div>
+
+                  <motion.div className="inline offer__acts" variants={line}>
+                    <Link
+                      to={offer.to}
+                      onClick={() => offer.code && pickCode(offer.code)}
+                      className="btn btn--primary btn--lg"
+                      style={{ "--btn-bg": offer.accent, "--btn-fg": "var(--pine-950)" } as CSSProperties}
+                    >
+                      {offer.cta} <Icon.arrow />
+                    </Link>
+                    <Link to="/how-it-works" className="btn btn--ghost btn--lg">
+                      How it works
+                    </Link>
+                  </motion.div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </article>
         </motion.div>
 
         <div className="offers__tabs" role="tablist" aria-label="Choose an offer">
