@@ -620,9 +620,19 @@ function ProductTile({ product }: { product: Product }) {
           background: `linear-gradient(165deg, color-mix(in srgb, ${product.accent} 26%, var(--surface)), var(--surface) 80%)`,
         }}
       >
-        {product.image || localPhoto ? (
+        {product.image ? (
           <img
-            src={product.image ?? localPhoto?.src}
+            src={product.image}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : localPhoto ? (
+          <img
+            src={localPhoto.src}
+            srcSet={localPhoto.srcSet}
+            sizes="(min-width: 900px) 280px, 44vw"
             alt=""
             loading="lazy"
             decoding="async"

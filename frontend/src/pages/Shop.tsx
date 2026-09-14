@@ -84,8 +84,17 @@ function ProductCard({ product }: { product: Product }) {
           background: `linear-gradient(160deg, color-mix(in srgb, ${product.accent} 30%, var(--surface)), var(--surface) 82%)`,
         }}
       >
-        {product.image || localPhoto ? (
-          <img src={product.image ?? localPhoto?.src} alt="" loading="lazy" decoding="async" />
+        {product.image ? (
+          <img src={product.image} alt="" loading="lazy" decoding="async" />
+        ) : localPhoto ? (
+          <img
+            src={localPhoto.src}
+            srcSet={localPhoto.srcSet}
+            sizes="(min-width: 900px) 40vw, 84px"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <ProductArt kind={product.kind} accent={product.accent} size="62%" />
         )}

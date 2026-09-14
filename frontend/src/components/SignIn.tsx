@@ -128,7 +128,7 @@ export function PhoneSignIn({ page = false }: { page?: boolean }) {
               <span className="label">Name (first time only)</span>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
             </label>
-            <button className="btn btn--primary btn--lg btn--block mt-3" disabled={busy}>
+            <button className="btn btn--primary btn--lg mt-3" disabled={busy}>
               {busy ? <Spinner /> : null} Send code
             </button>
           </form>
@@ -181,7 +181,7 @@ export function PhoneSignIn({ page = false }: { page?: boolean }) {
             </div>
           )}
 
-          <button className="btn btn--ghost btn--block mt-3" onClick={() => requestCode()} disabled={seconds > 0 || busy}>
+          <button className="btn btn--ghost mt-3" onClick={() => requestCode()} disabled={seconds > 0 || busy}>
             {busy ? <Spinner /> : null}
             {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
           </button>

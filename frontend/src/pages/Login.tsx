@@ -34,9 +34,9 @@ export function Login() {
         </aside>
 
         <div className="auth__form">
-          <Logo className="" />
+          <Logo className="auth__logo" />
           <PhoneSignIn page />
-          <p className="hint center mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
+          <p className="hint auth__staff">
             Farm staff? <Link to="/farm/login" className="linkish">Sign in here</Link>.
           </p>
         </div>

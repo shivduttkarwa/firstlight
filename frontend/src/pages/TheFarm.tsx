@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AppBar } from "../components/Shell";
 import { Icon, Reveal } from "../components/ui";
 import { api, type FarmInfo } from "../lib/api";
-import { photo } from "../lib/photos";
+import { farmImage } from "../lib/photos";
 
 const HERD = [
   {
@@ -59,7 +59,7 @@ export function TheFarm() {
 
           <Reveal className="farmintro__fig">
             <div className="figure" style={{ aspectRatio: "3 / 2" }}>
-              <img {...photo("cow", 960, 640, "(min-width: 900px) 640px, 92vw")} />
+              <img {...farmImage()} />
               <div className="figure__over">
                 <span className="eyebrow">The herd, before the heat comes up</span>
               </div>

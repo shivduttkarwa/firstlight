@@ -182,104 +182,77 @@ export function storyImage(sizes = "(min-width: 900px) 680px, 92vw") {
   };
 }
 
+const FARM_BASE = `${import.meta.env.BASE_URL}images/farm/farm-herd-first-light`;
+
+export function farmImage(sizes = "(min-width: 900px) 640px, 92vw") {
+  return {
+    src: `${FARM_BASE}.webp`,
+    srcSet: [480, 720, 1024]
+      .map((width) => `${FARM_BASE}-${width}.webp ${width}w`)
+      .concat(`${FARM_BASE}.webp 1536w`)
+      .join(", "),
+    sizes,
+    alt: "Rathi cows and Murrah buffaloes sharing an open farm shed at first light",
+    loading: "lazy" as const,
+    decoding: "async" as const,
+  };
+}
+
 type ProductPhotoRole = "packshot" | "detail" | "lifestyle";
 
 interface ProductPhoto {
   src: string;
+  srcSet: string;
+  sizes: string;
   alt: string;
   role: ProductPhotoRole;
 }
 
-const PRODUCT_PHOTOS: Partial<Record<string, Record<ProductPhotoRole, Omit<ProductPhoto, "role">>>> = {
+const PRODUCT_PHOTOS: Partial<Record<string, Record<ProductPhotoRole, string>>> = {
   "cow-milk": {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-packshot.png`,
-      alt: "A chilled Firstlight Desi Cow Milk bottle in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-detail.png`,
-      alt: "A chilled Firstlight Desi Cow Milk bottle against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/cow-milk/cow-milk-lifestyle.png`,
-      alt: "Firstlight Desi Cow Milk beside a glass in a sunlit farm kitchen",
-    },
+    packshot: "A chilled Firstlight Desi Cow Milk bottle in soft morning light",
+    detail: "A chilled Firstlight Desi Cow Milk bottle against a deep green background",
+    lifestyle: "Firstlight Desi Cow Milk beside a glass in a sunlit farm kitchen",
   },
   "buffalo-milk": {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-packshot.png`,
-      alt: "A chilled Firstlight Murrah Buffalo Milk bottle in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-detail.png`,
-      alt: "A chilled Firstlight Murrah Buffalo Milk bottle against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-milk/buffalo-milk-lifestyle.png`,
-      alt: "Firstlight Murrah Buffalo Milk beside a glass in a sunlit farm kitchen",
-    },
+    packshot: "A chilled Firstlight Murrah Buffalo Milk bottle in soft morning light",
+    detail: "A chilled Firstlight Murrah Buffalo Milk bottle against a deep green background",
+    lifestyle: "Firstlight Murrah Buffalo Milk beside a glass in a sunlit farm kitchen",
   },
   "desi-cow-ghee": {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-packshot.png`,
-      alt: "A Firstlight Desi Cow Ghee jar in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-detail.png`,
-      alt: "A Firstlight Desi Cow Ghee jar against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/desi-cow-ghee/desi-cow-ghee-lifestyle.png`,
-      alt: "Firstlight Desi Cow Ghee in a sunlit farm kitchen",
-    },
+    packshot: "A Firstlight Desi Cow Ghee jar in soft morning light",
+    detail: "A Firstlight Desi Cow Ghee jar against a deep green background",
+    lifestyle: "Firstlight Desi Cow Ghee in a sunlit farm kitchen",
   },
   "buffalo-ghee": {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-packshot.png`,
-      alt: "A Firstlight Buffalo Ghee jar in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-detail.png`,
-      alt: "A Firstlight Buffalo Ghee jar against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/buffalo-ghee/buffalo-ghee-lifestyle.png`,
-      alt: "Firstlight Buffalo Ghee in a sunlit farm kitchen",
-    },
+    packshot: "A Firstlight Buffalo Ghee jar in soft morning light",
+    detail: "A Firstlight Buffalo Ghee jar against a deep green background",
+    lifestyle: "Firstlight Buffalo Ghee in a sunlit farm kitchen",
   },
   "fresh-curd": {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-packshot.png`,
-      alt: "A Firstlight Fresh Curd clay pot in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-detail.png`,
-      alt: "A Firstlight Fresh Curd clay pot against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/fresh-curd/fresh-curd-lifestyle.png`,
-      alt: "Firstlight Fresh Curd in a sunlit farm kitchen",
-    },
+    packshot: "A Firstlight Fresh Curd clay pot in soft morning light",
+    detail: "A Firstlight Fresh Curd clay pot against a deep green background",
+    lifestyle: "Firstlight Fresh Curd in a sunlit farm kitchen",
   },
   chhach: {
-    packshot: {
-      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-packshot.png`,
-      alt: "A chilled Firstlight Chhach bottle in soft morning light",
-    },
-    detail: {
-      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-detail.png`,
-      alt: "A chilled Firstlight Chhach bottle against a deep green background",
-    },
-    lifestyle: {
-      src: `${import.meta.env.BASE_URL}images/products/chhach/chhach-lifestyle.png`,
-      alt: "Firstlight Chhach beside a glass in a sunlit farm kitchen",
-    },
+    packshot: "A chilled Firstlight Chhach bottle in soft morning light",
+    detail: "A chilled Firstlight Chhach bottle against a deep green background",
+    lifestyle: "Firstlight Chhach beside a steel tumbler in a sunlit farm kitchen",
   },
 };
 
 export function productPhoto(slug: string, role: ProductPhotoRole = "packshot") {
-  const photo = PRODUCT_PHOTOS[slug]?.[role];
-  return photo ? { ...photo, role } : null;
+  const alt = PRODUCT_PHOTOS[slug]?.[role];
+  if (!alt) return null;
+
+  const base = `${import.meta.env.BASE_URL}images/products/${slug}/${slug}-${role}`;
+  return {
+    src: `${base}.webp`,
+    srcSet: [480, 720, 1024].map((width) => `${base}-${width}.webp ${width}w`).concat(`${base}.webp 1536w`).join(", "),
+    sizes: "(min-width: 900px) 460px, 92vw",
+    alt,
+    role,
+  };
 }
 
 export function productGallery(slug: string) {

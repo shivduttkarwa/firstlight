@@ -98,6 +98,8 @@ export function ProductDetail() {
           {product.image_wide || activePhoto ? (
             <img
               src={product.image_wide ?? activePhoto?.src}
+              srcSet={product.image_wide ? undefined : activePhoto?.srcSet}
+              sizes={product.image_wide ? undefined : activePhoto?.sizes}
               alt={product.image_wide ? product.name : activePhoto?.alt}
               decoding="async"
             />
@@ -115,7 +117,14 @@ export function ProductDetail() {
                   aria-label={`Show ${photo.role} photo`}
                   aria-pressed={index === photoIndex}
                 >
-                  <img src={photo.src} alt="" loading="lazy" decoding="async" />
+                  <img
+                    src={photo.src}
+                    srcSet={photo.srcSet}
+                    sizes="52px"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </button>
               ))}
             </div>

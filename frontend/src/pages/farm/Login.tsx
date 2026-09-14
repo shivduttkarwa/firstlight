@@ -65,12 +65,12 @@ export function FarmLogin() {
               autoComplete="current-password"
             />
           </label>
-          <button className="btn btn--primary btn--lg btn--block mt-3" disabled={busy || !username || !password}>
+          <button className="btn btn--primary btn--lg mt-3" disabled={busy || !username || !password}>
             {busy ? <Spinner /> : null} Sign in
           </button>
         </form>
 
-        <p className="hint center mt-3">
+        <p className="hint auth__staff">
           Are you a customer? <Link to="/login" className="linkish">Sign in with your phone</Link>.
         </p>
       </div>
