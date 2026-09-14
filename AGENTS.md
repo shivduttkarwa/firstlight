@@ -149,6 +149,12 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
     retries as a guest, and turns every failure into `ApiError` with a readable `.message`.
   - Dates for skip and pause come from the server's calendar, never the device clock.
 - **Images:** use `photo(key, w, h, sizes)` / `fullBleed(key)` from `lib/photos.ts` (width-based srcset).
+- **Smooth scrolling on phones:**
+  - A page must not change height while data loads. Loading placeholders reuse the real card's markup
+    with blank text; copy that comes from the CMS falls back to the seeded text.
+  - Choose signed-in layouts with `useSignedIn()`, not `user`, so a stored login never flashes the guest page.
+  - Size screen-tall sections with `svh`, never `dvh`: `dvh` changes as the address bar slides.
+  - No `backdrop-filter`, animated `filter: blur()` or endless image drift below 900px.
 
 ## Working rules
 

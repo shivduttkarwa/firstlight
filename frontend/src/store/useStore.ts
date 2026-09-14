@@ -110,6 +110,9 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 }));
 
+/** Signed in, or holding a token that is still being checked, so pages never flash the signed-out layout. */
+export const useSignedIn = () => useAuth((s) => s.user !== null || (!s.ready && tokens.access !== null));
+
 const OFFER_KEY = "fl.offer";
 
 interface OfferState {

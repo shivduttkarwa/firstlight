@@ -14,7 +14,7 @@ html {
 }
 
 body {
-  min-height: 100dvh;
+  min-height: 100svh;
   font-family: var(--font-body);
   font-size: var(--t-base);
   line-height: 1.55;
@@ -24,8 +24,6 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
-  /* Feels like an app, not a page: no rubber-band, no double-tap zoom. */
-  overscroll-behavior-y: none;
   touch-action: manipulation;
 }
 

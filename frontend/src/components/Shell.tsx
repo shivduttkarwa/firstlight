@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../store/useStore";
+import { useAuth, useSignedIn } from "../store/useStore";
 import { Icon } from "./ui";
 
 export function Logo({ className }: { className?: string }) {
@@ -116,8 +116,8 @@ export function AppBar({
     Shown from 900px, where the bottom tabs are hidden. */
 export function SiteHeader() {
   const { pathname } = useLocation();
-  const user = useAuth((s) => s.user);
-  const over = pathname === "/" && !user;
+  const signedIn = useSignedIn();
+  const over = pathname === "/" && !signedIn;
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {

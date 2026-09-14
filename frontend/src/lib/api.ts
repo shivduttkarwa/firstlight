@@ -456,12 +456,26 @@ export type CmsBlock =
   | { type: "faqs"; id: string; value: { question: string; answer: string }[] }
   | { type: "section"; id: string; value: Record<string, unknown> };
 
+const HOME_KEY = "fl.home";
+
+/** The storefront words from the last visit, so the home page opens at its real shape. */
+export function cachedHomeContent(): HomeContent | null {
+  try {
+    const raw = localStorage.getItem(HOME_KEY);
+    return raw ? (JSON.parse(raw) as HomeContent) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchHomeContent(): Promise<HomeContent | null> {
   try {
     const res = await api.get<{ items: HomeContent[] }>(
       "/cms/pages/?type=website.HomePage&fields=hero_eyebrow,hero_heading,hero_subheading,hero_cta_label,hero_image,story_heading,story_body,body&limit=1",
     );
-    return res.items[0] ?? null;
+    const content = res.items[0] ?? null;
+    if (content) localStorage.setItem(HOME_KEY, JSON.stringify(content));
+    return content;
   } catch {
     return null;
   }

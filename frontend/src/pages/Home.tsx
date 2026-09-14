@@ -4,9 +4,10 @@ import { Link } from "react-router-dom";
 import { Offers } from "../components/Offers";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
-import { Icon, Reveal, Skeletons } from "../components/ui";
+import { Icon, Reveal } from "../components/ui";
 import {
   api,
+  cachedHomeContent,
   fetchHomeContent,
   type CmsBlock,
   type HomeContent,
@@ -16,24 +17,61 @@ import {
 } from "../lib/api";
 import { greeting, money, relativeDay, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
 import { HERO_SLIDES, STEP_PHOTOS, fullBleed, photo } from "../lib/photos";
-import { useAuth } from "../store/useStore";
+import { useAuth, useSignedIn } from "../store/useStore";
 
 function blockOf<T extends CmsBlock["type"]>(body: CmsBlock[] | undefined, type: T) {
   return body?.find((b) => b.type === type) as Extract<CmsBlock, { type: T }> | undefined;
 }
 
+const FALLBACK_STATS: Extract<CmsBlock, { type: "stats" }>["value"] = [
+  { value: "90 min", label: "From udder to doorstep" },
+  { value: "4.30 am", label: "First milking begins" },
+  { value: "2", label: "Deliveries every day" },
+  { value: "0", label: "Days spent in a warehouse" },
+];
+
+const FALLBACK_PROCESS: Extract<CmsBlock, { type: "process" }>["value"] = [
+  {
+    time: "4.30 am",
+    title: "The shed wakes",
+    body: "Our cows and buffaloes are milked by hand and machine in the same hour, every day of the year.",
+  },
+  {
+    time: "5.15 am",
+    title: "Straight into steel",
+    body: "No holding tank, no powder, no water. Milk goes from the pail into chilled steel cans.",
+  },
+  {
+    time: "5.30 am",
+    title: "On the road",
+    body: "Cans leave the farm at Village 11 SHPD while the milk is still warm from the animal.",
+  },
+  {
+    time: "6.00 am",
+    title: "At your gate",
+    body: "Poured into your own vessel or sealed pouches, whichever you asked for.",
+  },
+];
+
+const FALLBACK_STORY = [
+  "Firstlight is a single farm in Sriganganagar district, not a collection centre. The animals you are buying from are the ones standing in our shed. There is no aggregator, no chilling plant, no three-day journey in a tanker.",
+  "What that means for you is simple: the milk on your stove this morning was inside an animal ninety minutes ago.",
+];
+
 export function Home() {
   const user = useAuth((s) => s.user);
+  const ready = useAuth((s) => s.ready);
+  const signedIn = useSignedIn();
   const baskets = useAuth((s) => s.baskets);
-  const [content, setContent] = useState<HomeContent | null>(null);
+  const [content, setContent] = useState<HomeContent | null>(cachedHomeContent);
   const [products, setProducts] = useState<Product[] | null>(null);
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [packages, setPackages] = useState<Package[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
 
   useEffect(() => {
-    void fetchHomeContent().then(setContent);
+    void fetchHomeContent().then((fresh) => fresh && setContent(fresh));
     void api.get<Product[]>("/products/").then(setProducts).catch(() => setProducts([]));
-    void api.get<Package[]>("/packages/").then(setPackages).catch(() => undefined);
+    void api.get<Package[]>("/packages/").then(setPackages).catch(() => setPackages([]));
   }, []);
 
   useEffect(() => {
@@ -41,17 +79,18 @@ export function Home() {
     void api.get<Summary>("/deliveries/summary/").then(setSummary).catch(() => undefined);
   }, [user]);
 
-  const stats = blockOf(content?.body, "stats")?.value ?? [];
-  const process = blockOf(content?.body, "process")?.value ?? [];
-  const story = richTextToParagraphs(content?.story_body ?? "");
+  // Until the farm's words arrive, the seeded ones hold the page's shape, so nothing jumps mid-scroll.
+  const stats = content ? (blockOf(content.body, "stats")?.value ?? []) : FALLBACK_STATS;
+  const process = content ? (blockOf(content.body, "process")?.value ?? []) : FALLBACK_PROCESS;
+  const story = content ? richTextToParagraphs(content.story_body ?? "") : FALLBACK_STORY;
   const basket = baskets[0];
 
   return (
     <>
       {/* Signed out, the bar floats over the hero photograph. */}
-      <AppBar over={!user} />
+      <AppBar over={!signedIn} />
 
-      {user ? (
+      {signedIn ? (
         <section className="shell dash" style={{ paddingTop: "var(--sp-2)" }}>
           <motion.div
             className="dash__hello"
@@ -61,18 +100,18 @@ export function Home() {
           >
             <p className="eyebrow eyebrow--bare muted">{greeting()}</p>
             <h1 className="display" style={{ marginTop: 2 }}>
-              {user.full_name?.split(" ")[0] || "Welcome"}.
+              {user?.full_name?.split(" ")[0] || "Welcome"}.
             </h1>
           </motion.div>
 
           <div className="mt-3 dash__next">
-            <NextDeliveryCard summary={summary} />
+            <NextDeliveryCard summary={summary} pending={summary === null && (!!basket || !ready)} />
           </div>
 
           <div className="tiles mt-2 dash__tiles">
             <Link to="/account/wallet" className="tile">
               <div className="tile__k">Wallet</div>
-              <div className="tile__v num">{money(summary?.wallet_balance ?? user.wallet_balance)}</div>
+              <div className="tile__v num">{money(summary?.wallet_balance ?? user?.wallet_balance ?? 0)}</div>
             </Link>
             <Link to="/basket" className="tile">
               <div className="tile__k">In your basket</div>
@@ -80,17 +119,23 @@ export function Home() {
             </Link>
           </div>
 
-          {basket && (
+          {(basket || !ready) && (
             <Link to="/basket" className="row mt-2 dash__row">
               <span className="row__art" style={{ background: "var(--accent-soft)" }}>
                 <Icon.calendar />
               </span>
               <span className="row__main">
                 <span className="row__t">
-                  {basket.status === "paused" ? "Your basket is paused" : "About " + money(basket.monthly_estimate) + " a month"}
+                  {!basket
+                    ? "\u00a0"
+                    : basket.status === "paused"
+                      ? "Your basket is paused"
+                      : "About " + money(basket.monthly_estimate) + " a month"}
                 </span>
                 <span className="row__s">
-                  {basket.item_count} item{basket.item_count === 1 ? "" : "s"} · {basket.address_summary}
+                  {basket
+                    ? `${basket.item_count} item${basket.item_count === 1 ? "" : "s"} · ${basket.address_summary}`
+                    : "\u00a0"}
                 </span>
               </span>
               <span className="row__end muted">
@@ -105,19 +150,19 @@ export function Home() {
 
       <Offers />
 
-      {packages.length > 0 && (
+      {(packages === null || packages.length > 0) && (
         <section className="sect" style={{ paddingBottom: 0 }}>
           <div className="shell sectionhead">
-            <h2 className="h3">{user ? "Add a package" : "Start in two taps"}</h2>
+            <h2 className="h3">{signedIn ? "Add a package" : "Start in two taps"}</h2>
             <Link to="/packages" className="linkish">
               See all
             </Link>
           </div>
           <div className="shell">
             <div className="rail">
-              {packages.map((p) => (
-                <PackageCard key={p.id} pkg={p} />
-              ))}
+              {packages
+                ? packages.map((p) => <PackageCard key={p.id} pkg={p} />)
+                : [0, 1].map((n) => <PackageCardSkeleton key={n} />)}
             </div>
           </div>
         </section>
@@ -130,19 +175,13 @@ export function Home() {
             All products
           </Link>
         </div>
-        {products === null ? (
-          <div className="shell">
-            <Skeletons count={2} height={120} />
+        <div className="shell">
+          <div className="rail rail--tiles">
+            {products
+              ? products.map((p) => <ProductTile key={p.id} product={p} />)
+              : [0, 1, 2, 3].map((n) => <ProductTileSkeleton key={n} />)}
           </div>
-        ) : (
-          <div className="shell">
-            <div className="rail rail--tiles">
-              {products.map((p) => (
-                <ProductTile key={p.id} product={p} />
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
       </section>
 
       {stats.length > 0 && (
@@ -210,7 +249,7 @@ export function Home() {
         </div>
       </section>
 
-      {!user && (
+      {!signedIn && (
         <section className="shell" style={{ paddingBottom: "var(--sp-10)" }}>
           <Reveal>
             <div className="ctaband">
@@ -235,9 +274,9 @@ export function Home() {
   );
 }
 
-function NextDeliveryCard({ summary }: { summary: Summary | null }) {
+function NextDeliveryCard({ summary, pending }: { summary: Summary | null; pending: boolean }) {
   const next = summary?.next_delivery;
-  if (!next) {
+  if (!next && !pending) {
     return (
       <div className="card card--pad">
         <span className="eyebrow">Next delivery</span>
@@ -253,6 +292,7 @@ function NextDeliveryCard({ summary }: { summary: Summary | null }) {
   return (
     <motion.div
       className="card card--pad card--raised"
+      aria-busy={!next}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.08 }}
@@ -263,16 +303,16 @@ function NextDeliveryCard({ summary }: { summary: Summary | null }) {
           Next delivery
         </span>
         <span style={{ color: "var(--accent)", width: 20, height: 20 }}>
-          {next.slot === "morning" ? <Icon.sun /> : <Icon.moon />}
+          {next?.slot === "evening" ? <Icon.moon /> : <Icon.sun />}
         </span>
       </div>
       <div
         style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-xl)", lineHeight: 1.05, marginTop: 8 }}
       >
-        {relativeDay(next.date)}, {slotLabel(next.slot).toLowerCase()}
+        {next ? `${relativeDay(next.date)}, ${slotLabel(next.slot).toLowerCase()}` : "\u00a0"}
       </div>
       <div className="sm" style={{ color: "var(--on-panel-dim)", marginTop: 4 }}>
-        {slotTime(next.slot)}
+        {next ? slotTime(next.slot) : "\u00a0"}
       </div>
       <div
         style={{
@@ -285,10 +325,10 @@ function NextDeliveryCard({ summary }: { summary: Summary | null }) {
         }}
       >
         <span className="sm" style={{ color: "var(--on-panel-dim)" }}>
-          {next.product.name} · {next.product.variant_label} × {next.quantity}
+          {next ? `${next.product.name} · ${next.product.variant_label} × ${next.quantity}` : "\u00a0"}
         </span>
         <span className="num" style={{ fontWeight: 700 }}>
-          {money(next.total)}
+          {next ? money(next.total) : "\u00a0"}
         </span>
       </div>
     </motion.div>
@@ -475,6 +515,53 @@ function Hero({ content }: { content: HomeContent | null }) {
 
       <Ticker />
     </>
+  );
+}
+
+/** Same markup as the real card with blank text, so the card that replaces it is the same height. */
+function PackageCardSkeleton() {
+  return (
+    <div className="card railcard skel" style={{ borderTop: "3px solid transparent" }} aria-hidden="true">
+      <div className="between">
+        <span className="eyebrow eyebrow--bare">&nbsp;</span>
+        <span className="chip" style={{ visibility: "hidden" }}>
+          &nbsp;
+        </span>
+      </div>
+      <h3 className="h3" style={{ marginTop: 2 }}>
+        &nbsp;
+      </h3>
+      <p className="sm" style={{ flex: 1 }}>
+        &nbsp;
+      </p>
+      <div className="inline" style={{ gap: 6, marginTop: 6 }}>
+        <span className="chip" style={{ visibility: "hidden" }}>
+          &nbsp;
+        </span>
+      </div>
+      <div className="between" style={{ marginTop: "var(--sp-3)" }}>
+        <b className="num" style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem" }}>
+          &nbsp;
+        </b>
+        <span className="chip chip--ok" style={{ visibility: "hidden" }}>
+          &nbsp;
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ProductTileSkeleton() {
+  return (
+    <div className="card tilecard" aria-hidden="true">
+      <div className="skel" style={{ aspectRatio: "1", borderRadius: 0 }} />
+      <div style={{ padding: "var(--sp-3)" }}>
+        <div style={{ fontWeight: 600, fontSize: "var(--t-sm)" }}>&nbsp;</div>
+        <div className="tiny num" style={{ marginTop: 2 }}>
+          &nbsp;
+        </div>
+      </div>
+    </div>
   );
 }
 

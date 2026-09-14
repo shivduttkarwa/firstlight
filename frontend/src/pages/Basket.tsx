@@ -266,7 +266,7 @@ export function Basket() {
           {calendar && <ChangesList days={calendar} onPick={setDayOpen} />}
 
           <button
-            className="btn btn--danger btn--block btn--desk-auto"
+            className="btn btn--danger"
             disabled={busy}
             onClick={async () => {
               const sure = await ask({
