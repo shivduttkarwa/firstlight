@@ -91,6 +91,59 @@ Actions runs it on every push, with `DEBUG` off, alongside the frontend build.
 | `OTP_SHOW_CODE` | Show the sign-in code on screen. Needed until SMS exists — a demo only. |
 | `WALLET_SELF_TOPUP` | Let customers add wallet money themselves. A demo only — it is free money. |
 
+## Deploying
+
+One Lightsail server (Ubuntu 24.04, Mumbai) runs everything. nginx serves the
+storefront and hands `/api`, `/admin`, `/django-admin` and `/documents` to gunicorn;
+PostgreSQL 18 sits on the same box; cron builds the roster at 00:15. The files are in
+`deploy/`.
+
+**Connect from PowerShell.** Add this to `~/.ssh/config` and `ssh firstlight` just works:
+
+```
+Host firstlight
+    HostName <static-ip>
+    User ubuntu
+    IdentityFile ~/.ssh/firstlight-mumbai.pem
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+```
+
+**The first time.** Attach the static IP (and point the domain's A record at it),
+open ports 80 and 443 in the Lightsail firewall, and push `deploy/` to GitHub. Then:
+
+```powershell
+scp deploy/setup.sh firstlight:
+ssh firstlight "sudo DOMAIN=milk.example.in EMAIL=you@example.com bash setup.sh"
+```
+
+It installs PostgreSQL 18, Node 22 and nginx, clones the repo into
+`/srv/firstlight/app`, writes `backend/.env`, deploys, seeds, and gets an HTTPS
+certificate. It prints the staff password, which it also keeps in
+`/root/firstlight-admin-password`. Leave `DOMAIN` out to serve plain http on the IP:
+the storefront and farm desk work, but Wagtail's `/admin` needs HTTPS to sign in.
+Setup is safe to re-run — do that to add a domain later, or after changing the
+service, cron or nginx files in `deploy/`.
+
+**Every time after that:**
+
+```powershell
+.\deploy.ps1
+```
+
+It only deploys committed work on `main`: it pushes to GitHub, then the server fetches
+that exact commit, installs requirements, runs `check` and the migrations, builds the
+storefront, swaps it in, and reloads gunicorn without dropping requests.
+`.\deploy.ps1 -Ref <commit>` puts an earlier commit back, but migrations don't run
+backwards, so fix a bad migration forward instead.
+
+**On the server:** `journalctl -u firstlight -f` is the API log, `journalctl -t
+firstlight-roster` the nightly roster. Settings are in
+`/srv/firstlight/app/backend/.env` — edit with `sudo -u firstlight nano …`, then
+`sudo systemctl restart firstlight`. Setup writes that file once, turning on
+`OTP_SHOW_CODE` and `WALLET_SELF_TOPUP` for the demo; after that it only keeps the
+host and https settings in step.
+
 ---
 
 ## The subscription model
