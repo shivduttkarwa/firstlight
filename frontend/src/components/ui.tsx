@@ -188,23 +188,6 @@ export function Reveal({
   );
 }
 
-export function PageFade({ children }: { children: ReactNode }) {
-  const still = useReducedMotion();
-  return (
-    <motion.div
-      className="page"
-      initial={still ? { opacity: 0 } : { opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        opacity: { duration: 0.32, ease: "easeOut" },
-        y: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export function Spinner({ size = 18 }: { size?: number }) {
   return (
     <motion.svg

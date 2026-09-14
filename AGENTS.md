@@ -156,6 +156,9 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
   - Choose signed-in layouts with `useSignedIn()`, not `user`, so a stored login never flashes the guest page.
   - Size screen-tall sections with `svh`, never `dvh`: `dvh` changes as the address bar slides.
   - No `backdrop-filter`, animated `filter: blur()` or endless image drift below 900px.
+- **Page changes:** `PageOutlet` (`components/PageTransition.tsx`) keys the page by path and resets the scroll before
+  it paints; the new page fades in as it rises with the CSS `page-in` animation on `.page`. Same-page filter changes
+  do not animate. Do not add scroll resets anywhere else.
 
 ## Working rules
 

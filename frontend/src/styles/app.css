@@ -37,6 +37,16 @@
   padding-bottom: calc(var(--tab-h) + 34px + var(--sp-6));
 }
 
+.page {
+  animation: page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
 .pad {
   padding-inline: var(--pad);
 }
@@ -2639,18 +2649,6 @@
   color: var(--on-panel-dim);
 }
 
-/* A lime rule that sweeps across the top on every page change. */
-.routebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 150;
-  height: 3px;
-  background: var(--accent);
-  transform-origin: left center;
-  pointer-events: none;
-}
 
 @media (min-width: 900px) {
   .appbar--site {

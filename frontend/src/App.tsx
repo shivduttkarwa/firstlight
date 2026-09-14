@@ -1,9 +1,9 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { Link, Navigate, Route, Routes, useLocation, useOutlet } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { ConfirmHost } from "./components/Confirm";
+import { PageOutlet } from "./components/PageTransition";
 import { CUSTOMER_TABS, FARM_TABS, FarmNav, SiteFooter, SiteHeader, TabBar } from "./components/Shell";
-import { PageFade, Skeletons, Toaster } from "./components/ui";
+import { Skeletons, Toaster } from "./components/ui";
 import { Account, Addresses, Deliveries, WalletPage } from "./pages/Account";
 import { Basket } from "./pages/Basket";
 import { Home } from "./pages/Home";
@@ -32,14 +32,6 @@ const Loading = () => (
   </div>
 );
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [pathname]);
-  return null;
-}
-
 function NotFound() {
   return (
     <div className="shell sect center">
@@ -52,46 +44,12 @@ function NotFound() {
   );
 }
 
-/** The page transition, wrapped around the outlet rather than around the whole
-    route tree — anything outside it survives a navigation. The old page goes at
-    once and the new one rises in, so there is no wait and no scroll jump. */
-function FadingOutlet() {
-  const { pathname } = useLocation();
-  const outlet = useOutlet();
-  return <PageFade key={pathname}>{outlet}</PageFade>;
-}
-
-function RouteBar() {
-  const { pathname } = useLocation();
-  const still = useReducedMotion();
-  const last = useRef(pathname);
-  const [run, setRun] = useState(0);
-
-  useEffect(() => {
-    if (last.current === pathname) return;
-    last.current = pathname;
-    setRun((n) => n + 1);
-  }, [pathname]);
-
-  if (!run || still) return null;
-  return (
-    <motion.span
-      key={run}
-      className="routebar"
-      aria-hidden="true"
-      initial={{ scaleX: 0, opacity: 1 }}
-      animate={{ scaleX: 1, opacity: 0 }}
-      transition={{ scaleX: { duration: 0.55, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.3, delay: 0.45 } }}
-    />
-  );
-}
-
 /** Customer app: bottom tabs, storefront routes. */
 function CustomerShell() {
   return (
     <>
       <SiteHeader />
-      <FadingOutlet />
+      <PageOutlet />
       <SiteFooter />
       <TabBar tabs={CUSTOMER_TABS} />
     </>
@@ -103,7 +61,7 @@ function AuthShell() {
   return (
     <>
       <SiteHeader />
-      <FadingOutlet />
+      <PageOutlet />
     </>
   );
 }
@@ -122,7 +80,7 @@ function FarmShell() {
     <>
       <FarmNav />
       <Suspense fallback={<Loading />}>
-        <FadingOutlet />
+        <PageOutlet />
       </Suspense>
       <TabBar tabs={FARM_TABS} />
     </>
@@ -131,7 +89,6 @@ function FarmShell() {
 
 export default function App() {
   const bootstrap = useAuth((s) => s.bootstrap);
-  const location = useLocation();
 
   useEffect(() => {
     void bootstrap();
@@ -145,7 +102,7 @@ export default function App() {
       <div className="mesh" aria-hidden="true" />
 
       <main id="main" className="appmain">
-        <Routes location={location}>
+        <Routes>
           {/* Farm desk */}
           <Route
             path="/farm/login"
@@ -187,8 +144,6 @@ export default function App() {
         </Routes>
       </main>
 
-      <RouteBar />
-      <ScrollToTop />
       <ConfirmHost />
       <Toaster />
     </div>
