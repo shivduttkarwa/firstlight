@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { photo, type PhotoKey } from "../lib/photos";
-import { toast } from "../store/useStore";
+import { toast, useAuth, useOffer } from "../store/useStore";
 import { Icon } from "./ui";
 
 interface Offer {
@@ -13,6 +13,7 @@ interface Offer {
   body: string;
   save: string;
   saveNote: string;
+  /** Empty for the neighbour offer, where each household shares its own code. */
   code: string;
   perks: string[];
   photo: PhotoKey;
@@ -26,13 +27,13 @@ const OFFERS: Offer[] = [
   {
     id: "first-month",
     tab: "First month",
-    eyebrow: "New subscribers",
+    eyebrow: "New households",
     title: "Your first month, a fifth lighter",
-    body: "Start any package before Sunday's round closes and we take twenty per cent off month one. Same herd, same gate, same six o'clock.",
+    body: "Start any package and we put twenty per cent of your first month straight into your wallet. Same herd, same gate, same six o'clock.",
     save: "20%",
-    saveNote: "off month one",
+    saveNote: "of month one",
     code: "FIRSTLIGHT20",
-    perks: ["Any package", "Pause any day", "No delivery fee"],
+    perks: ["Any package", "Credited on the spot", "No delivery fee"],
     photo: "pour",
     accent: "#c6f24b",
     to: "/packages",
@@ -44,11 +45,11 @@ const OFFERS: Offer[] = [
     tab: "Bilona ghee",
     eyebrow: "From the shed",
     title: "A jar of bilona ghee, on the farm",
-    body: "Baskets over two thousand a month get their first 250 ml jar free, hand-churned from the same morning's cream and never bought in.",
+    body: "Baskets that come to ₹2,000 a month or more get a 250 g jar's worth in the wallet, hand-churned from the same morning's cream.",
     save: "FREE",
-    saveNote: "250 ml jar",
+    saveNote: "250 g jar",
     code: "GHEEFREE",
-    perks: ["Baskets over ₹2,000", "Churned Thursdays", "One per household"],
+    perks: ["Baskets over ₹2,000", "Once per household", "Credited on the spot"],
     photo: "ghee",
     accent: "#e8b04b",
     to: "/shop",
@@ -59,33 +60,17 @@ const OFFERS: Offer[] = [
     id: "refer",
     tab: "Refer a neighbour",
     eyebrow: "Both of you",
-    title: "Send us next door, drink a week free",
-    body: "Every neighbour who starts on your code lands ₹200 in their wallet, and a week of milk lands in yours. The round gets shorter for everyone.",
+    title: "Send us next door, both get ₹200",
+    body: "Share your code. Your neighbour gets ₹200 in their wallet when they join, and ₹200 lands in yours after their first delivery.",
     save: "₹200",
     saveNote: "each way",
-    code: "NEIGHBOUR",
-    perks: ["Unlimited referrals", "Credited in 24 hours", "Any package"],
+    code: "",
+    perks: ["Unlimited neighbours", "Paid after their first delivery", "Any package"],
     photo: "road",
     accent: "#4fd6a0",
     to: "/account/wallet",
     cta: "See your wallet",
     hours: 300,
-  },
-  {
-    id: "curd",
-    tab: "Weekend curd",
-    eyebrow: "Evening round only",
-    title: "Two pots of set curd, one price",
-    body: "Saturday and Sunday, order a 400 g pot of set curd on the evening round and the second pot is on the farm. Set overnight, never yesterday's.",
-    save: "1+1",
-    saveNote: "on set curd",
-    code: "WEEKENDCURD",
-    perks: ["Sat & Sun", "Evening slot", "400 g pots"],
-    photo: "curd",
-    accent: "#8fb6ff",
-    to: "/shop",
-    cta: "Add set curd",
-    hours: 41,
   },
 ];
 
@@ -97,11 +82,14 @@ const OPENED = Date.now();
 
 export function Offers() {
   const still = useReducedMotion();
+  const referralCode = useAuth((s) => s.user?.referral_code ?? "");
+  const pickCode = useOffer((s) => s.setCode);
   const [[i, dir], setSlide] = useState<[number, number]>([0, 1]);
   const [paused, setPaused] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const offer = OFFERS[i];
+  const code = offer.code || referralCode;
 
   const go = (step: number) => setSlide(([n]) => [(n + step + OFFERS.length) % OFFERS.length, step]);
   const jump = (n: number) => setSlide(([c]) => [n, n < c ? -1 : 1]);
@@ -121,12 +109,13 @@ export function Offers() {
   }, [copied]);
 
   async function copyCode() {
+    if (offer.code) pickCode(offer.code);
     try {
-      await navigator.clipboard.writeText(offer.code);
+      await navigator.clipboard.writeText(code);
       setCopied(true);
-      toast(`Code ${offer.code} copied`);
+      toast(offer.code ? `${code} copied. It fills in when you start.` : `Your code ${code} is copied. Send it to a neighbour.`);
     } catch {
-      toast("Could not copy the code", "error");
+      toast(offer.code ? `${code} will fill in when you start.` : "Could not copy the code", offer.code ? "info" : "error");
     }
   }
 
@@ -288,28 +277,35 @@ export function Offers() {
 
                 <motion.div className="offer__coupon" variants={line}>
                   <span className="offer__couponk">
-                    <span className="tiny">Use code</span>
-                    <span className="offer__code">{offer.code}</span>
+                    <span className="tiny">{offer.code ? "Use code" : "Your code"}</span>
+                    <span className="offer__code">{code || "••••••"}</span>
                   </span>
-                  <button type="button" className="offer__copybtn" onClick={copyCode}>
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.span
-                        key={copied ? "yes" : "no"}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.6 }}
-                        transition={{ duration: 0.16 }}
-                      >
-                        {copied ? <Icon.tick /> : <Icon.copy />}
-                      </motion.span>
-                    </AnimatePresence>
-                    {copied ? "Copied" : "Copy"}
-                  </button>
+                  {code ? (
+                    <button type="button" className="offer__copybtn" onClick={copyCode}>
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                          key={copied ? "yes" : "no"}
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.6 }}
+                          transition={{ duration: 0.16 }}
+                        >
+                          {copied ? <Icon.tick /> : <Icon.copy />}
+                        </motion.span>
+                      </AnimatePresence>
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  ) : (
+                    <Link to="/login?next=/account/wallet" className="offer__copybtn">
+                      Sign in
+                    </Link>
+                  )}
                 </motion.div>
 
                 <motion.div className="inline offer__acts" variants={line}>
                   <Link
                     to={offer.to}
+                    onClick={() => offer.code && pickCode(offer.code)}
                     className="btn btn--primary btn--lg"
                     style={{ "--btn-bg": offer.accent, "--btn-fg": "var(--pine-950)" } as CSSProperties}
                   >

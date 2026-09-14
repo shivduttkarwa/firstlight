@@ -2444,11 +2444,9 @@
     padding: 0.55rem 0.8rem;
   }
   .offer__acts {
-    width: 100%;
     margin-top: 0;
   }
   .offer__acts .btn {
-    flex: 1;
     min-height: 50px;
   }
   .offer__acts .btn--ghost {
@@ -2821,6 +2819,16 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+@media (max-width: 899px) {
+  .pdp__media {
+    aspect-ratio: 16 / 10;
+    max-height: 34svh;
+  }
+  .pdp__media svg {
+    width: auto !important;
+    height: 78%;
+  }
 }
 
 .pkggrid {
@@ -3359,7 +3367,8 @@
   color: var(--on-panel-dim);
 }
 .ctaband__actions {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   margin-top: var(--sp-6);
 }
@@ -3405,7 +3414,6 @@
     padding: var(--sp-12);
   }
   .ctaband__actions {
-    display: flex;
     flex: none;
     margin-top: 0;
   }

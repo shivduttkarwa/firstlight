@@ -322,6 +322,13 @@ export interface Wallet {
   can_top_up: boolean;
 }
 
+export interface Redeemed {
+  code: string;
+  amount: string;
+  balance: string;
+  is_referral: boolean;
+}
+
 export interface Summary {
   delivered_this_month: number;
   spend_this_month: string;

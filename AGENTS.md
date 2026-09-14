@@ -36,6 +36,7 @@ backend/
                   cutoffs.py   when a round is "packed" and stops taking changes
   orders/         Delivery (roster rows), Wallet + WalletTransaction, Order (one-off, read-only for now)
                   money.py     parse_amount — use it for every rupee value from a client
+  offers/         Coupon (farm-made codes), Redemption; services.py redeem / pay_referrer
   farmdesk/       staff-only API (IsFarmStaff): round, mark, overview, customers, products, content
   website/        Wagtail HomePage/StandardPage, seed command, admin skin (templates/, static/)
 frontend/src/
@@ -118,7 +119,12 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
   - OTP is throttled per IP (DRF scopes) and per phone. Attempts are counted atomically (`OneTimeCode.verify`).
   - Refresh tokens rotate and are blacklisted; `POST /api/auth/logout/` retires one.
 - **One-off orders** can't be placed (the API is read-only), because nothing puts them on the round or charges them.
-  The offer codes on Home (FIRSTLIGHT20…) are display-only.
+- **Offer codes** (`offers` app) only ever credit the wallet, never change a price.
+  - `offers.services.redeem()` locks the wallet, so a code works once per household. Farm-made codes
+    (`Coupon`, edited in the admin under Offers) credit a per cent of the basket's month, a fixed amount or a pack's price.
+  - Each customer's `referral_code` is also a code. The new household is credited at once, and the referrer when that
+    household's first delivery is charged (`pay_referrer()`, called from `mark_delivered()`).
+  - The app applies a code right after a basket starts, or from the wallet page.
 
 ## Frontend conventions
 
@@ -168,6 +174,6 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
   `build_roster`), all in `deploy/`. `setup.sh` provisions it once; `.\deploy.ps1` ships committed `main`
   (push → server runs `deploy/deploy.sh <sha>`). README "Deploying" has the steps. For a client demo, set
   `OTP_SHOW_CODE=true` and `WALLET_SELF_TOPUP=true`, which setup does on first run.
-- **Not built yet:** SMS gateway, payment gateway, one-off orders on the round, offer-code redemption,
-  delivery-area check, a service worker for offline riders.
+- **Not built yet:** SMS gateway, payment gateway, one-off orders on the round, delivery-area check, a service
+  worker for offline riders.
 - **Hiding a product** only removes it from the shop. Existing baskets still receive it, and the farm desk says so.

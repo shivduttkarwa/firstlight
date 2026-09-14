@@ -9,6 +9,7 @@ from wagtail.documents import urls as wagtaildocs_urls
 
 from accounts.views import AddressViewSet, LogoutView, MeView, RequestOTPView, StaffLoginView, VerifyOTPView
 from catalog.views import CategoryViewSet, ProductViewSet
+from offers.views import RedeemView
 from orders.views import DeliveryViewSet, OrderViewSet, WalletView
 from subscriptions.views import PackageViewSet, SubscriptionLineViewSet, SubscriptionViewSet
 
@@ -33,6 +34,7 @@ api_patterns = [
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/me/", MeView.as_view(), name="me"),
     path("wallet/", WalletView.as_view(), name="wallet"),
+    path("offers/redeem/", RedeemView.as_view(), name="offer-redeem"),
     path("farm-info/", farm_info, name="farm-info"),
     path("farm/", include("farmdesk.urls")),
     path("", include(router.urls)),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AddressForm } from "../components/AddressForm";
+import { cleanCode, redeemOffer } from "../components/OfferCode";
 import { ProductArt } from "../components/ProductArt";
 import { ask } from "../components/Confirm";
 import { AppBar } from "../components/Shell";
@@ -18,7 +19,7 @@ import {
 } from "../lib/api";
 import { longDate, money, relativeDay, slotLabel, toISO } from "../lib/format";
 import { safeNext } from "../lib/nav";
-import { toast, useAuth } from "../store/useStore";
+import { toast, useAuth, useOffer } from "../store/useStore";
 
 function RequireUser({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -234,12 +235,25 @@ export function Account() {
 const PRESETS = [500, 1000, 2000, 5000];
 
 export function WalletPage() {
+  const user = useAuth((s) => s.user);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [failed, setFailed] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
+  const [code, setCode] = useState(() => useOffer.getState().code);
+  const [applying, setApplying] = useState(false);
   const refreshUser = useAuth((s) => s.refreshUser);
+
+  async function applyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setApplying(true);
+    const done = await redeemOffer(code);
+    setApplying(false);
+    if (!done) return;
+    setCode("");
+    void api.get<Wallet>("/wallet/").then(setWallet).catch(() => undefined);
+  }
 
   useEffect(() => {
     void api.get<Wallet>("/wallet/").then(setWallet).catch(() => setFailed(true));
@@ -288,6 +302,33 @@ export function WalletPage() {
         </div>
 
         <div>
+          <form className="card card--pad" style={{ marginBottom: "var(--sp-5)" }} onSubmit={applyCode}>
+            <label className="label" htmlFor="offer-code">
+              Offer or neighbour code
+            </label>
+            <div className="inline" style={{ flexWrap: "nowrap" }}>
+              <input
+                id="offer-code"
+                className="input"
+                value={code}
+                onChange={(e) => setCode(cleanCode(e.target.value))}
+                placeholder="FIRSTLIGHT20"
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button className="btn btn--soft" disabled={!code || applying}>
+                {applying ? <Spinner /> : null} Apply
+              </button>
+            </div>
+            {user?.referral_code && (
+              <p className="hint mt-1">
+                Your neighbour code is <b className="num">{user.referral_code}</b>. They get ₹200 when they join, and
+                you get ₹200 after their first delivery.
+              </p>
+            )}
+          </form>
+
           <h2 className="h3 mb-2">Recent activity</h2>
           {failed ? (
             <Empty title="Could not load your wallet" body="Check your connection and open this page again." />

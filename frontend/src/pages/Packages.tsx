@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { AccountSteps, accountStep, useAccountStep } from "../components/AccountSteps";
 import { ProductArt } from "../components/ProductArt";
 import { ask } from "../components/Confirm";
+import { OfferCodeField, redeemOffer } from "../components/OfferCode";
 import { AppBar } from "../components/Shell";
-import { Icon, Reveal, Skeletons, Spinner } from "../components/ui";
+import { Icon, Reveal, Sheet, Skeletons, Spinner } from "../components/ui";
 import { ApiError, api, type Package } from "../lib/api";
 import { frequencyLabel, money, slotLabel } from "../lib/format";
-import { toast, useAuth } from "../store/useStore";
+import { toast, useAuth, useOffer } from "../store/useStore";
 
 export function Packages() {
   const [packages, setPackages] = useState<Package[] | null>(null);
@@ -116,12 +118,14 @@ export function PackageDetail() {
   const navigate = useNavigate();
   const user = useAuth((s) => s.user);
   const addresses = useAuth((s) => s.addresses);
-  const baskets = useAuth((s) => s.baskets);
+  const current = useAuth((s) => s.baskets[0] ?? null);
   const loadBaskets = useAuth((s) => s.loadBaskets);
-  const current = baskets[0] ?? null;
+  const step = useAccountStep();
 
   const [pkg, setPkg] = useState<Package | null>(null);
   const [addressId, setAddressId] = useState<number | null>(null);
+  const [code, setCode] = useState(() => useOffer.getState().code);
+  const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -146,18 +150,17 @@ export function PackageDetail() {
   }
 
   async function start() {
-    if (!user) {
-      navigate(`/login?next=/packages/${slug}`);
+    if (accountStep()) {
+      setGate(true);
       return;
     }
-    if (!addressId) {
-      navigate(`/account/addresses?next=/packages/${slug}`);
-      toast("Add a delivery address first.");
-      return;
-    }
+    // Read fresh: this can run straight after signing in, before a re-render.
+    const state = useAuth.getState();
+    const basket = state.baskets[0] ?? null;
+    const address = addressId ?? (state.addresses.find((a) => a.is_default) ?? state.addresses[0]).id;
     // One basket per household: starting a package replaces the one you have.
     if (
-      current &&
+      basket &&
       !(await ask({
         title: `Switch to ${pkg!.name}?`,
         body: (
@@ -165,9 +168,9 @@ export function PackageDetail() {
             <div className="confirm__swap">
               <div>
                 <span className="eyebrow eyebrow--bare muted">Now</span>
-                <b>{current.package_name ?? "Your basket"}</b>
+                <b>{basket.package_name ?? "Your basket"}</b>
                 <span className="tiny muted">
-                  {current.item_count} item{current.item_count === 1 ? "" : "s"} · {money(current.monthly_estimate)}/mo
+                  {basket.item_count} item{basket.item_count === 1 ? "" : "s"} · {money(basket.monthly_estimate)}/mo
                 </span>
               </div>
               <Icon.arrow />
@@ -195,11 +198,12 @@ export function PackageDetail() {
     try {
       await api.post("/subscriptions/from-package/", {
         package: pkg!.slug,
-        address: addressId,
-        replace: !!current,
+        address,
+        replace: !!basket,
       });
       await loadBaskets();
       toast(`${pkg!.name} is on the round.`);
+      if (code) await redeemOffer(code);
       navigate("/basket");
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) await loadBaskets();
@@ -298,15 +302,43 @@ export function PackageDetail() {
             </div>
           )}
 
+          <div className="mt-3">
+            <OfferCodeField value={code} onChange={setCode} />
+          </div>
+
           <div className="mt-3" style={{ paddingBottom: "var(--sp-8)" }}>
             <button className="btn btn--primary btn--lg btn--block" onClick={start} disabled={busy}>
               {busy ? <Spinner /> : null}
-              {!user ? "Sign in to start" : current ? "Switch to this package" : "Start this package"}
+              {current ? "Switch to this package" : "Start this package"}
             </button>
             <p className="hint center mt-1">Change any item, skip any day, pause whenever. No lock-in.</p>
           </div>
         </aside>
       </div>
+
+      <Sheet
+        open={gate}
+        onClose={() => setGate(false)}
+        title={step === "address" ? "Where should we deliver?" : "Sign in to start"}
+      >
+        <AccountSteps
+          summary={
+            <div className="row mb-2" style={{ borderTop: `3px solid ${pkg.accent}` }}>
+              <span className="row__main">
+                <span className="row__t">{pkg.name}</span>
+                <span className="row__s">
+                  {pkg.items.length} item{pkg.items.length === 1 ? "" : "s"} · about {money(pkg.monthly_estimate)} a
+                  month
+                </span>
+              </span>
+            </div>
+          }
+          onReady={() => {
+            setGate(false);
+            void start();
+          }}
+        />
+      </Sheet>
     </>
   );
 }

@@ -1,12 +1,14 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { AccountSteps, accountStep, useAccountStep } from "../components/AccountSteps";
+import { OfferCodeField, redeemOffer } from "../components/OfferCode";
 import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Icon, Sheet, Skeletons, Spinner } from "../components/ui";
 import { ApiError, api, type Basket as TBasket, type Frequency, type Product, type Slot, type Variant } from "../lib/api";
 import { WEEKDAYS, frequencyLabel, money, richTextToParagraphs, slotLabel, slotTime } from "../lib/format";
-import { toast, useAuth } from "../store/useStore";
+import { toast, useAuth, useOffer } from "../store/useStore";
 
 export function ProductDetail() {
   const { slug = "" } = useParams();
@@ -170,33 +172,32 @@ function AddSheet({
   variant: Variant;
 }) {
   const navigate = useNavigate();
-  const user = useAuth((s) => s.user);
-  const baskets = useAuth((s) => s.baskets);
-  const addresses = useAuth((s) => s.addresses);
+  const hasBasket = useAuth((s) => s.baskets.length > 0);
   const loadBaskets = useAuth((s) => s.loadBaskets);
+  const step = useAccountStep();
 
   const [quantity, setQuantity] = useState(1);
   const [slot, setSlot] = useState<Slot>(product.slots[0] ?? "morning");
   const [frequency, setFrequency] = useState<Frequency>("daily");
   const [weekdays, setWeekdays] = useState<number[]>([0, 3]);
+  const [code, setCode] = useState(() => useOffer.getState().code);
+  const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const basket = baskets[0] ?? null;
+  useEffect(() => {
+    if (!open) setGate(false);
+  }, [open]);
+
+  function submit() {
+    if (accountStep()) setGate(true);
+    else void add();
+  }
 
   async function add() {
-    if (!user) {
-      navigate(`/login?next=/product/${product.slug}`);
-      return;
-    }
-    if (!addresses.length) {
-      navigate("/account/addresses?next=/product/" + product.slug);
-      toast("Add a delivery address first.");
-      return;
-    }
-
+    const { addresses, baskets } = useAuth.getState();
     setBusy(true);
     try {
-      let target = basket;
+      let target = baskets[0] ?? null;
       if (!target) {
         target = await api.post<TBasket>("/subscriptions/", {
           address: (addresses.find((a) => a.is_default) ?? addresses[0]).id,
@@ -206,7 +207,7 @@ function AddSheet({
         await loadBaskets();
       }
       await api.post("/basket-lines/", {
-        subscription: target!.id,
+        subscription: target.id,
         variant: variant.id,
         quantity,
         slot,
@@ -215,6 +216,7 @@ function AddSheet({
       });
       await loadBaskets();
       toast(`${product.name} added to your basket.`);
+      if (code) await redeemOffer(code);
       onClose();
       navigate("/basket");
     } catch (e) {
@@ -231,83 +233,121 @@ function AddSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Add ${product.name}`}
+      title={gate ? (step === "address" ? "Where should we deliver?" : "Sign in to add") : `Add ${product.name}`}
       footer={
-        <button className="btn btn--primary btn--lg btn--block" onClick={add} disabled={busy || noDays}>
-          {busy ? <Spinner /> : null}
-          {user ? `Add · ${money(perDelivery)} per delivery` : "Sign in to add"}
-        </button>
+        gate ? undefined : (
+          <button className="btn btn--primary btn--lg btn--block" onClick={submit} disabled={busy || noDays}>
+            {busy ? <Spinner /> : null}
+            Add · {money(perDelivery)} per delivery
+          </button>
+        )
       }
     >
-      <div className="between mb-2">
-        <div>
-          <div className="row__t">{variant.label}</div>
-          <div className="row__s num">{money(variant.price)} each</div>
-        </div>
-        <div className="stepper">
-          <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={quantity <= 1} aria-label="Fewer">
-            −
-          </button>
-          <span className="num">{quantity}</span>
-          <button onClick={() => setQuantity((q) => Math.min(20, q + 1))} disabled={quantity >= 20} aria-label="More">
-            +
-          </button>
-        </div>
-      </div>
-
-      {product.slots.length > 1 && (
+      {gate ? (
+        <AccountSteps
+          summary={
+            <div className="row mb-2">
+              <span
+                className="row__art"
+                style={{ background: `color-mix(in srgb, ${product.accent} 24%, var(--surface))` }}
+              >
+                <ProductArt kind={product.kind} accent={product.accent} size="66%" />
+              </span>
+              <span className="row__main">
+                <span className="row__t">
+                  {quantity} × {product.name} {variant.label}
+                </span>
+                <span className="row__s">
+                  {slotLabel(slot)} · {frequencyLabel(frequency, weekdays)} · {money(perDelivery)}
+                </span>
+              </span>
+              <button type="button" className="linkish row__end" onClick={() => setGate(false)}>
+                Change
+              </button>
+            </div>
+          }
+          onReady={() => {
+            setGate(false);
+            void add();
+          }}
+        />
+      ) : (
         <>
-          <span className="label">Round</span>
-          <div className="seg mb-2">
-            {product.slots.map((s) => (
-              <button key={s} className={`seg__b${slot === s ? " seg__b--on" : ""}`} onClick={() => setSlot(s)}>
-                {slot === s && <motion.span layoutId="add-slot" className="seg__bg" />}
-                {slotLabel(s)}
+          <div className="between mb-2">
+            <div>
+              <div className="row__t">{variant.label}</div>
+              <div className="row__s num">{money(variant.price)} each</div>
+            </div>
+            <div className="stepper">
+              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={quantity <= 1} aria-label="Fewer">
+                −
+              </button>
+              <span className="num">{quantity}</span>
+              <button onClick={() => setQuantity((q) => Math.min(20, q + 1))} disabled={quantity >= 20} aria-label="More">
+                +
+              </button>
+            </div>
+          </div>
+
+          {product.slots.length > 1 && (
+            <>
+              <span className="label">Round</span>
+              <div className="seg mb-2">
+                {product.slots.map((s) => (
+                  <button key={s} className={`seg__b${slot === s ? " seg__b--on" : ""}`} onClick={() => setSlot(s)}>
+                    {slot === s && <motion.span layoutId="add-slot" className="seg__bg" />}
+                    {slotLabel(s)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <span className="label">How often</span>
+          <div className="opts">
+            {(["daily", "alternate", "weekdays", "monthly"] as const).map((f) => (
+              <button key={f} className={`opt${frequency === f ? " opt--on" : ""}`} onClick={() => setFrequency(f)}>
+                <span className="opt__t">{frequencyLabel(f, [0, 3])}</span>
+                {frequency === f && (
+                  <span className="opt__tick">
+                    <Icon.tick />
+                  </span>
+                )}
               </button>
             ))}
           </div>
+
+          {frequency === "weekdays" && (
+            <div className="mt-2">
+              <span className="label">Which days</span>
+              <div className="days">
+                {WEEKDAYS.map((label, i) => (
+                  <button
+                    key={label}
+                    className={`day${weekdays.includes(i) ? " day--on" : ""}`}
+                    onClick={() =>
+                      setWeekdays((w) => (w.includes(i) ? w.filter((d) => d !== i) : [...w, i].sort((a, b) => a - b)))
+                    }
+                    aria-pressed={weekdays.includes(i)}
+                  >
+                    {label.slice(0, 2)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-2">
+            <OfferCodeField value={code} onChange={setCode} />
+          </div>
+
+          <p className="hint mt-2">
+            {hasBasket
+              ? "This joins your existing basket, so it is one bill and one place to pause."
+              : "This starts your basket. You can add more items any time."}
+          </p>
         </>
       )}
-
-      <span className="label">How often</span>
-      <div className="opts">
-        {(["daily", "alternate", "weekdays", "monthly"] as const).map((f) => (
-          <button key={f} className={`opt${frequency === f ? " opt--on" : ""}`} onClick={() => setFrequency(f)}>
-            <span className="opt__t">{frequencyLabel(f, [0, 3])}</span>
-            {frequency === f && (
-              <span className="opt__tick">
-                <Icon.tick />
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {frequency === "weekdays" && (
-        <div className="mt-2">
-          <span className="label">Which days</span>
-          <div className="days">
-            {WEEKDAYS.map((label, i) => (
-              <button
-                key={label}
-                className={`day${weekdays.includes(i) ? " day--on" : ""}`}
-                onClick={() =>
-                  setWeekdays((w) => (w.includes(i) ? w.filter((d) => d !== i) : [...w, i].sort((a, b) => a - b)))
-                }
-                aria-pressed={weekdays.includes(i)}
-              >
-                {label.slice(0, 2)}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <p className="hint mt-2">
-        {basket
-          ? "This joins your existing basket, so it is one bill and one place to pause."
-          : "This starts your basket. You can add more items any time."}
-      </p>
     </Sheet>
   );
 }

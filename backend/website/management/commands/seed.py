@@ -9,6 +9,7 @@ from django.db import transaction
 from wagtail.models import Page, Site
 
 from catalog.models import Category, Product, ProductVariant
+from offers.models import Coupon
 from subscriptions.models import Frequency, Package, PackageItem
 from website.models import HomePage
 
@@ -211,6 +212,7 @@ class Command(BaseCommand):
         self.seed_categories()
         self.seed_products()
         self.seed_packages()
+        self.seed_offers()
         self.seed_staff()
         self.seed_homepage()
         self.stdout.write(self.style.SUCCESS("Firstlight is seeded and ready."))
@@ -291,6 +293,29 @@ class Command(BaseCommand):
                     sort_order=order,
                 )
         self.stdout.write(f"  packages: {Package.objects.count()}")
+
+    def seed_offers(self):
+        Coupon.objects.get_or_create(
+            code="FIRSTLIGHT20",
+            defaults={
+                "title": "A fifth of your first month",
+                "kind": Coupon.Kind.PERCENT_OF_MONTH,
+                "value": Decimal("20"),
+                "new_customers_only": True,
+            },
+        )
+        ghee = ProductVariant.objects.filter(product__slug="desi-cow-ghee", label="250 g").first()
+        if ghee:
+            Coupon.objects.get_or_create(
+                code="GHEEFREE",
+                defaults={
+                    "title": "A jar of bilona ghee",
+                    "kind": Coupon.Kind.PACK,
+                    "variant": ghee,
+                    "min_monthly": Decimal("2000"),
+                },
+            )
+        self.stdout.write(f"  offer codes: {Coupon.objects.count()}")
 
     def seed_staff(self):
         from accounts.models import User

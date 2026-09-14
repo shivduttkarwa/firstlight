@@ -71,8 +71,13 @@ class Delivery(models.Model):
         if not claimed:
             self.refresh_from_db(fields=["status", "delivered_at"])
             return None
+        # Imported here because offers builds on this module.
+        from offers.services import pay_referrer
+
         self.status, self.delivered_at = self.Status.DELIVERED, now
-        return Wallet.for_user(self.user).debit(self.total, self.label, ref=str(self.pk))
+        charge = Wallet.for_user(self.user).debit(self.total, self.label, ref=str(self.pk))
+        pay_referrer(self.user)
+        return charge
 
     @transaction.atomic
     def set_status(self, new_status):

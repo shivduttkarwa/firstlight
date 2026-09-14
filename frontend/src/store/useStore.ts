@@ -8,7 +8,7 @@ interface AuthState {
   baskets: Basket[];
   ready: boolean;
 
-  signIn: (user: User, t: { access: string; refresh: string }) => void;
+  signIn: (user: User, t: { access: string; refresh: string }) => Promise<void>;
   signInStaff: (staff: StaffUser, t: { access: string; refresh: string }) => void;
   signOut: () => void;
   bootstrap: () => Promise<void>;
@@ -28,12 +28,13 @@ export const useAuth = create<AuthState>((set, get) => ({
   baskets: [],
   ready: false,
 
-  signIn: (user, t) => {
+  signIn: async (user, t) => {
     tokens.set(t);
     localStorage.removeItem(STAFF_KEY);
-    set({ user, staff: null });
-    void get().loadAddresses();
-    void get().loadBaskets();
+    set({ staff: null });
+    // The user lands last, so no screen sees them signed in without their addresses.
+    await Promise.all([get().loadAddresses(), get().loadBaskets()]).catch(() => undefined);
+    set({ user });
   },
 
   signInStaff: (staff, t) => {
@@ -106,6 +107,23 @@ export const useAuth = create<AuthState>((set, get) => ({
     const baskets = await api.get<Basket[]>("/subscriptions/");
     set({ baskets });
     return baskets;
+  },
+}));
+
+const OFFER_KEY = "fl.offer";
+
+interface OfferState {
+  code: string;
+  setCode: (code: string) => void;
+}
+
+/** The offer code a visitor picked on the home page, carried to wherever they start. */
+export const useOffer = create<OfferState>((set) => ({
+  code: sessionStorage.getItem(OFFER_KEY) ?? "",
+  setCode: (code) => {
+    if (code) sessionStorage.setItem(OFFER_KEY, code);
+    else sessionStorage.removeItem(OFFER_KEY);
+    set({ code });
   },
 }));
 

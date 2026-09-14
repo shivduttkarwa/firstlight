@@ -255,6 +255,7 @@ GET  /api/deliveries/             ?upcoming=true&from=&to=
 GET  /api/deliveries/summary/
      /api/orders/                 one-off purchases
 GET  /api/wallet/  POST /api/wallet/  {amount}
+POST /api/offers/redeem/          {code}   an offer or a neighbour's code, credited to the wallet
 
 --- staff only (is_staff) ---
 GET  /api/farm/overview/
@@ -308,7 +309,6 @@ tabs become a top nav and the shell caps at 1180px.
 - **No SMS.** `OneTimeCode` is issued and returned in the response while `OTP_SHOW_CODE` is on.
 - **One-off orders are read-only.** Nothing puts them on the round or charges for them
   yet, so placing one is switched off until that exists.
-- **Offer codes are display only.** Nothing redeems `FIRSTLIGHT20` and friends yet.
 - **No delivery-area check.** Any PIN code is accepted.
 - **No service worker.** The manifest makes it installable, but it does not work
   offline yet — worth adding for riders in patchy signal.

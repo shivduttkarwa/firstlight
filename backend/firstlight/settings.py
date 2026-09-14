@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "catalog",
     "subscriptions",
     "orders",
+    "offers",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -171,6 +172,7 @@ REST_FRAMEWORK = {
         "otp_request": os.getenv("THROTTLE_OTP_REQUEST", "20/hour"),
         "otp_verify": os.getenv("THROTTLE_OTP_VERIFY", "40/hour"),
         "staff_login": os.getenv("THROTTLE_STAFF_LOGIN", "10/hour"),
+        "offer_redeem": os.getenv("THROTTLE_OFFER_REDEEM", "30/hour"),
     },
 }
 
@@ -210,6 +212,8 @@ SLOT_CUTOFFS = {"morning": "21:00", "evening": "13:00"}
 # add wallet money themselves — both fine for a demo, never for real money.
 OTP_SHOW_CODE = env_bool("OTP_SHOW_CODE", DEBUG)
 WALLET_SELF_TOPUP = env_bool("WALLET_SELF_TOPUP", DEBUG)
+# Rupees for a household joining on a neighbour's code, and again for the neighbour.
+REFERRAL_CREDIT = os.getenv("REFERRAL_CREDIT", "200")
 # Per phone number, on top of the per-IP throttles above.
 OTP_CODES_PER_HOUR = int(os.getenv("OTP_CODES_PER_HOUR", "50" if DEBUG else "5"))
 OTP_FAILURES_PER_DAY = int(os.getenv("OTP_FAILURES_PER_DAY", "100" if DEBUG else "15"))
