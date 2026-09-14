@@ -68,7 +68,7 @@ async function renew(): Promise<boolean> {
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const sentToken = tokens.access;
   if (sentToken) headers.set("Authorization", `Bearer ${sentToken}`);
 
@@ -110,6 +110,7 @@ export const api = {
   patch: <T,>(p: string, data: unknown) => request<T>(p, { method: "PATCH", body: body(data) }),
   put: <T,>(p: string, data: unknown) => request<T>(p, { method: "PUT", body: body(data) }),
   del: <T,>(p: string) => request<T>(p, { method: "DELETE" }),
+  upload: <T,>(p: string, data: FormData) => request<T>(p, { method: "POST", body: data }),
 };
 
 /* ==========================================================
@@ -118,7 +119,8 @@ export const api = {
 
 export type Slot = "morning" | "evening";
 export type Frequency = "daily" | "alternate" | "weekdays" | "monthly";
-export type ProductKind = "milk" | "ghee" | "curd" | "chhach";
+/** milk, ghee, curd, chhach, or any type the farm adds (paneer, butter…). */
+export type ProductKind = string;
 
 export interface Variant {
   id: number;
@@ -350,6 +352,40 @@ export interface StaffUser {
   username: string;
   full_name: string;
   is_staff: true;
+}
+
+export interface StaffVariant {
+  id: number;
+  label: string;
+  price: string;
+  compare_at_price: string | null;
+  is_active: boolean;
+  /** Already in a basket, delivery, package or offer: it can be hidden, but keeps its name. */
+  in_use: boolean;
+}
+
+export interface StaffProduct extends Omit<Product, "variants"> {
+  is_active: boolean;
+  available_morning: boolean;
+  available_evening: boolean;
+  variants: StaffVariant[];
+}
+
+export interface ProductPayload {
+  name: string;
+  kind: string;
+  animal: Product["animal"];
+  tagline: string;
+  description: string;
+  badge: string;
+  fat_percent: string | null;
+  snf_percent: string | null;
+  shelf_life: string;
+  accent: string;
+  available_morning: boolean;
+  available_evening: boolean;
+  is_active: boolean;
+  variants: { id?: number; label: string; price: string; compare_at_price: string | null; is_active: boolean }[];
 }
 
 export interface RoundStop {

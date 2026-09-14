@@ -96,3 +96,31 @@ export function richTextToParagraphs(html: string): string[] {
       return el.value;
     });
 }
+
+const parseHtml = (html: string) => new DOMParser().parseFromString(html ?? "", "text/html").body;
+
+/** Plain sentences out of stored text that may carry a little HTML. */
+export function stripTags(value: string) {
+  return (parseHtml(value).textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+/** Rich text as paragraphs split by a blank line, for editing in a plain textarea. */
+export function htmlToParagraphs(html: string) {
+  const blocks = [...parseHtml(html).querySelectorAll("p")].map((p) => (p.textContent ?? "").trim()).filter(Boolean);
+  return blocks.length ? blocks.join("\n\n") : stripTags(html);
+}
+
+export function paragraphsToHtml(text: string) {
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim().replace(/\s*\n\s*/g, " "))
+    .filter(Boolean)
+    .map((p) => `<p>${escape(p)}</p>`)
+    .join("");
+}
+
+/** "paneer" → "Paneer", "desi-butter" → "Desi butter". */
+export function kindLabel(kind: string) {
+  return kind.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+}

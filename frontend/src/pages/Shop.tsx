@@ -4,7 +4,7 @@ import { ProductArt } from "../components/ProductArt";
 import { AppBar } from "../components/Shell";
 import { Empty, Icon, Reveal, Skeletons } from "../components/ui";
 import { api, type Product } from "../lib/api";
-import { money, slotLabel } from "../lib/format";
+import { kindLabel, money, slotLabel } from "../lib/format";
 import { productPhoto } from "../lib/photos";
 
 const FILTERS = [
@@ -28,6 +28,13 @@ export function Shop() {
     () => (active === "all" ? products : products?.filter((p) => p.kind === active)) ?? null,
     [products, active],
   );
+  const filters = useMemo(
+    () =>
+      products
+        ? [FILTERS[0], ...[...new Set(products.map((p) => p.kind))].map((key) => ({ key, label: kindLabel(key) }))]
+        : FILTERS,
+    [products],
+  );
 
   return (
     <>
@@ -42,7 +49,7 @@ export function Shop() {
 
       <div className="shell mt-3">
         <div className="filterrail">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               key={f.key}
               aria-pressed={f.key === active}

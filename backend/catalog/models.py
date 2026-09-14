@@ -10,6 +10,14 @@ from wagtail.models import Orderable
 from wagtail.search import index
 
 
+def normalise_kind(raw):
+    return slugify(str(raw or ""))[:30].strip("-")
+
+
+def kind_label(kind):
+    return kind.replace("-", " ").capitalize()
+
+
 class Slot(models.TextChoices):
     MORNING = "morning", "Morning (5.30 – 8.00 am)"
     EVENING = "evening", "Evening (5.00 – 7.30 pm)"
@@ -47,7 +55,7 @@ class Product(ClusterableModel, index.Indexed):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=120, unique=True)
     category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
-    kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.MILK)
+    kind = models.CharField(max_length=30, default=Kind.MILK, help_text="What sort of product, e.g. milk, ghee, paneer")
     animal = models.CharField(max_length=10, choices=Animal.choices, default=Animal.COW)
 
     tagline = models.CharField(max_length=160, blank=True)

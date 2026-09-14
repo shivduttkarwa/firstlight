@@ -24,6 +24,7 @@ const FarmLogin = farm(() => import("./pages/farm/Login"), "FarmLogin");
 const FarmMore = farm(() => import("./pages/farm/More"), "FarmMore");
 const FarmWebsite = farm(() => import("./pages/farm/More"), "FarmWebsite");
 const FarmProducts = farm(() => import("./pages/farm/Products"), "FarmProducts");
+const FarmProductForm = farm(() => import("./pages/farm/ProductForm"), "FarmProductForm");
 const FarmRound = farm(() => import("./pages/farm/Round"), "FarmRound");
 
 const Loading = () => (
@@ -117,6 +118,8 @@ export default function App() {
             <Route path="customers" element={<FarmCustomers />} />
             <Route path="customers/:id" element={<FarmCustomerDetail />} />
             <Route path="products" element={<FarmProducts />} />
+            <Route path="products/new" element={<FarmProductForm />} />
+            <Route path="products/:slug" element={<FarmProductForm />} />
             <Route path="more" element={<FarmMore />} />
             <Route path="website" element={<FarmWebsite />} />
           </Route>

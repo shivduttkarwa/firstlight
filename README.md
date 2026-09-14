@@ -216,8 +216,10 @@ retires it rather than deleting it, so its history and charges stay.
   wallet. Low balances are flagged before you knock.
 - **Customers** — search by name or phone; see baskets, upcoming deliveries and the
   full money trail. Record a cash or UPI top-up straight onto the balance.
-- **Products** — change a price in two taps. Existing subscribers keep the price they
-  signed up at, and the screen says so.
+- **Products** — add a product of any type (paneer, butter…) with a photo, pack sizes
+  and prices; edit or hide any product; change a price in two taps. Existing subscribers
+  keep the price they signed up at, and a pack size that has been ordered keeps its name:
+  it can be hidden, never renamed or deleted.
 - **More** — today's numbers, what to fill tomorrow broken down by product and slot,
   wallets running low, the website text editor, and the roster rebuild.
 
@@ -262,7 +264,8 @@ GET  /api/farm/overview/
 GET  /api/farm/round/             ?date=&slot=
 POST /api/farm/round/mark/        {delivery_ids | address+date+slot, status}
      /api/farm/customers/         list, detail, POST {id}/topup/
-     /api/farm/products/          list, POST set-price/, POST {slug}/toggle/
+     /api/farm/products/          list, POST (add), PUT {slug}/ (edit), POST set-price/, POST {slug}/toggle/
+       POST|DELETE {slug}/photo/  upload or remove the product photo
 GET/PATCH /api/farm/content/      the storefront words
 POST /api/farm/roster/rebuild/
 ```

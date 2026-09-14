@@ -30,14 +30,14 @@ Two apps, one codebase, one API:
 backend/
   firstlight/     settings.py (env-driven), urls.py, api.py (Wagtail CMS API), testing.py (test builders)
   accounts/       User (customers: phone+OTP; staff: username+password — one table), Address, OneTimeCode
-  catalog/        Category, Product, ProductVariant (pack size + price), Slot (morning/evening)
+  catalog/        Category, Product (kind is free text: any type the farm adds), ProductVariant (pack size + price), Slot
   subscriptions/  Package, Subscription (the basket), SubscriptionLine, DayOverride
                   services.py  build_roster / ensure_roster / cancel_basket / start_from_package
                   cutoffs.py   when a round is "packed" and stops taking changes
   orders/         Delivery (roster rows), Wallet + WalletTransaction, Order (one-off, read-only for now)
                   money.py     parse_amount — use it for every rupee value from a client
   offers/         Coupon (farm-made codes), Redemption; services.py redeem / pay_referrer
-  farmdesk/       staff-only API (IsFarmStaff): round, mark, overview, customers, products, content
+  farmdesk/       staff-only API (IsFarmStaff): round, mark, overview, customers, products (add/edit, photo, pack sizes), content
   website/        Wagtail HomePage/StandardPage, seed command, admin skin (templates/, static/)
 frontend/src/
   App.tsx         routes + shells (CustomerShell, AuthShell, FarmShell — farm pages lazy-loaded)
@@ -90,6 +90,8 @@ publishes the storefront to GitHub Pages; it has no backend there, so it can onl
   - Removing a line sets `is_active=False`.
   - `Delivery.line`, `Delivery.subscription` and `Delivery.address` use `RESTRICT`: a customer can be
     deleted with everything they own, but a basket, item or address with deliveries can't be deleted alone.
+  - A pack size that a basket line, delivery, package, order or offer points at is hidden (`is_active=False`),
+    never renamed or deleted. `farmdesk.views.used_variant_ids()` decides; the farm desk editor follows it.
 - **Cut-offs** (`SLOT_CUTOFFS`): morning closes 21:00 the evening before; evening closes 13:00
   the same day. After that the round is *packed*:
   - `set-day` and `skip-day` refuse it;

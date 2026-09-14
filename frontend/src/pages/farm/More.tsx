@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppBar } from "../../components/Shell";
 import { Icon, Skeletons, Spinner } from "../../components/ui";
 import { ApiError, api, type FarmOverview, type SiteContent } from "../../lib/api";
-import { money, slotLabel } from "../../lib/format";
+import { htmlToParagraphs, money, paragraphsToHtml, slotLabel, stripTags } from "../../lib/format";
 import { toast, useAuth } from "../../store/useStore";
 
 /* ── Overview / "More" hub ─────────────────────────────────────────── */
@@ -263,29 +263,4 @@ export function FarmWebsite() {
       </div>
     </>
   );
-}
-
-/** Plain sentences out of stored text that may carry a little HTML. */
-function stripTags(value: string) {
-  const box = document.createElement("div");
-  box.innerHTML = value ?? "";
-  return (box.textContent ?? "").replace(/\s+/g, " ").trim();
-}
-
-/** The story is rich text in the CMS; staff edit it as paragraphs split by a blank line. */
-function htmlToParagraphs(html: string) {
-  const box = document.createElement("div");
-  box.innerHTML = html ?? "";
-  const blocks = [...box.querySelectorAll("p")].map((p) => (p.textContent ?? "").trim()).filter(Boolean);
-  return blocks.length ? blocks.join("\n\n") : stripTags(html);
-}
-
-function paragraphsToHtml(text: string) {
-  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim().replace(/\s*\n\s*/g, " "))
-    .filter(Boolean)
-    .map((p) => `<p>${escape(p)}</p>`)
-    .join("");
 }
